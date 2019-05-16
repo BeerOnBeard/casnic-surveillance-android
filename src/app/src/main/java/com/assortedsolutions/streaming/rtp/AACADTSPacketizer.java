@@ -1,27 +1,26 @@
 /*
- * Copyright (C) 2011-2013 GUIGUI Simon, fyhertz@gmail.com
+ * Copyright (C) 2011-2015 GUIGUI Simon, fyhertz@gmail.com
  *
- * This file is part of Spydroid (http://code.google.com/p/spydroid-ipcamera/)
+ * This file is part of libstreaming (https://github.com/fyhertz/libstreaming)
  *
- * Spydroid is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This source code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License
- * along with this source code; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package com.assortedsolutions.streaming.rtp;
 
 import java.io.IOException;
-
+import com.assortedsolutions.streaming.audio.AACStream;
+import android.os.SystemClock;
 import android.util.Log;
 
 /**
@@ -38,13 +37,10 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 
     private final static String TAG = "AACADTSPacketizer";
 
-    // Maximum size of RTP packets
-    private final static int MAXPACKETSIZE = 1400;
-
     private Thread t;
     private int samplingRate = 8000;
 
-    public AACADTSPacketizer() throws IOException {
+    public AACADTSPacketizer() {
         super();
     }
 
@@ -56,18 +52,26 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
     }
 
     public void stop() {
-        try {
-            is.close();
-        } catch (IOException ignore) {}
-        t.interrupt();
-        t = null;
+        if (t != null) {
+            try {
+                is.close();
+            } catch (IOException ignore) {}
+            t.interrupt();
+            try {
+                t.join();
+            } catch (InterruptedException e) {}
+            t = null;
+        }
     }
 
     public void setSamplingRate(int samplingRate) {
         this.samplingRate = samplingRate;
+        socket.setClockFrequency(samplingRate);
     }
 
     public void run() {
+
+        Log.d(TAG,"AAC ADTS packetizer started !");
 
         // "A packet SHALL carry either one or more complete Access Units, or a
         // single fragment of an Access Unit.  Fragments of the same Access Unit
@@ -75,10 +79,11 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
         // marker bit in the RTP header is 1 on the last fragment of an Access
         // Unit, and 0 on all other fragments." RFC 3640
 
-        // Adts header fields that we need to parse
+        // ADTS header fields that we need to parse
         boolean protection;
-        int frameLength, sum, length, nbau, nbpk;
-        long oldtime = System.nanoTime(), now = oldtime, measured = 0, lastmeasured = 5000, expected = 0;
+        int frameLength, sum, length, nbau, nbpk, samplingRateIndex, profile;
+        long oldtime = SystemClock.elapsedRealtime(), now = oldtime;
+        byte[] header = new byte[8];
 
         try {
             while (!Thread.interrupted()) {
@@ -86,44 +91,43 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
                 // Synchronisation: ADTS packet starts with 12bits set to 1
                 while (true) {
                     if ( (is.read()&0xFF) == 0xFF ) {
-                        buffer[rtphl+1] = (byte) is.read();
-                        if ( (buffer[rtphl+1]&0xF0) == 0xF0) break;
+                        header[1] = (byte) is.read();
+                        if ( (header[1]&0xF0) == 0xF0) break;
                     }
                 }
 
                 // Parse adts header (ADTS packets start with a 7 or 9 byte long header)
-                is.read(buffer,rtphl+2,5);
+                fill(header, 2, 5);
 
                 // The protection bit indicates whether or not the header contains the two extra bytes
-                protection = (buffer[rtphl+1]&0x01)>0 ? true : false;
-                frameLength = (buffer[rtphl+3]&0x03) << 11 |
-                        (buffer[rtphl+4]&0xFF) << 3 |
-                        (buffer[rtphl+5]&0xFF) >> 5 ;
+                protection = (header[1]&0x01)>0 ? true : false;
+                frameLength = (header[3]&0x03) << 11 |
+                        (header[4]&0xFF) << 3 |
+                        (header[5]&0xFF) >> 5 ;
                 frameLength -= (protection ? 7 : 9);
 
                 // Number of AAC frames in the ADTS frame
-                nbau = (buffer[rtphl+6]&0x03) + 1;
+                nbau = (header[6]&0x03) + 1;
 
                 // The number of RTP packets that will be sent for this ADTS frame
                 nbpk = frameLength/MAXPACKETSIZE + 1;
 
                 // Read CRS if any
-                if (!protection) is.read(buffer,rtphl,2);
+                if (!protection) is.read(header,0,2);
+
+                samplingRate = AACStream.AUDIO_SAMPLING_RATES[(header[2]&0x3C) >> 2];
+                profile = ( (header[2]&0xC0) >> 6 ) + 1 ;
 
                 // We update the RTP timestamp
-                ts +=  1024; //stats.average()*samplingRate/1000000000;
-                socket.updateTimestamp(ts);
+                ts +=  1024L*1000000000L/samplingRate; //stats.average();
 
-                // We send one RTCP Sender Report every 5 secs
-                if (intervalBetweenReports>0) {
-                    if (delta>=intervalBetweenReports) {
-                        delta = 0;
-                        report.send(now,ts);
-                    }
-                }
+                //Log.d(TAG,"frameLength: "+frameLength+" protection: "+protection+" p: "+profile+" sr: "+samplingRate);
 
                 sum = 0;
                 while (sum<frameLength) {
+
+                    buffer = socket.requestBuffer();
+                    socket.updateTimestamp(ts);
 
                     // Read frame
                     if (frameLength-sum > MAXPACKETSIZE-rtphl-4) {
@@ -134,7 +138,7 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
                         socket.markNextPacket();
                     }
                     sum += length;
-                    is.read(buffer,rtphl+4, length);
+                    fill(buffer, rtphl+4, length);
 
                     // AU-headers-length field: contains the size in bits of a AU-header
                     // 13+3 = 16 bits -> 13bits for AU-size and 3bits for AU-Index / AU-Index-delta
@@ -150,23 +154,8 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
                     buffer[rtphl+3] &= 0xF8;
                     buffer[rtphl+3] |= 0x00;
 
-                    //Log.d(TAG,"frameLength: "+frameLength+" protection: "+protection+ " length: "+length);
-
                     send(rtphl+4+length);
 
-                }
-
-                // We wait a little to avoid sending to many packets too quickly
-                now = System.nanoTime();
-                measured = (now-oldtime)/1000000;
-                delta += measured;
-                oldtime = now;
-                expected = nbau*1024*1000 / (nbpk*samplingRate);
-                //Log.d(TAG,"expected: "+ expected + " measured: "+measured);
-                measured -= lastmeasured<2*expected/3 ? 2*expected/3-lastmeasured : 0;
-                lastmeasured = measured;
-                if (measured<2*expected/3) {
-                    Thread.sleep( 2*expected/3-measured );
                 }
 
             }
@@ -177,8 +166,20 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
             e.printStackTrace();
         } catch (InterruptedException ignore) {}
 
-        Log.d(TAG,"AAC packetizer stopped !");
+        Log.d(TAG,"AAC ADTS packetizer stopped !");
 
+    }
+
+    private int fill(byte[] buffer, int offset,int length) throws IOException {
+        int sum = 0, len;
+        while (sum<length) {
+            len = is.read(buffer, offset+sum, length-sum);
+            if (len<0) {
+                throw new IOException("End of stream");
+            }
+            else sum+=len;
+        }
+        return sum;
     }
 
 }

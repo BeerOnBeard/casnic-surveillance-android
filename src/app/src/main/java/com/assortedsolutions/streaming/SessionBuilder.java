@@ -1,31 +1,30 @@
 /*
- * Copyright (C) 2011-2013 GUIGUI Simon, fyhertz@gmail.com
+ * Copyright (C) 2011-2015 GUIGUI Simon, fyhertz@gmail.com
  *
- * This file is part of Spydroid (http://code.google.com/p/spydroid-ipcamera/)
+ * This file is part of libstreaming (https://github.com/fyhertz/libstreaming)
  *
- * Spydroid is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This source code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License
- * along with this source code; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package com.assortedsolutions.streaming;
 
 import java.io.IOException;
 import java.net.InetAddress;
-
 import com.assortedsolutions.streaming.audio.AACStream;
 import com.assortedsolutions.streaming.audio.AMRNBStream;
+import com.assortedsolutions.streaming.audio.AudioQuality;
 import com.assortedsolutions.streaming.audio.AudioStream;
+import com.assortedsolutions.streaming.gl.SurfaceView;
 import com.assortedsolutions.streaming.video.H263Stream;
 import com.assortedsolutions.streaming.video.H264Stream;
 import com.assortedsolutions.streaming.video.VideoQuality;
@@ -33,7 +32,6 @@ import com.assortedsolutions.streaming.video.VideoStream;
 import android.content.Context;
 import android.hardware.Camera.CameraInfo;
 import android.preference.PreferenceManager;
-import android.view.SurfaceHolder;
 
 /**
  * Call {@link #getInstance()} to get access to the SessionBuilder.
@@ -43,34 +41,37 @@ public class SessionBuilder {
     public final static String TAG = "SessionBuilder";
 
     /** Can be used with {@link #setVideoEncoder}. */
-    public final static int VIDEO_NONE = 0x00;
+    public final static int VIDEO_NONE = 0;
 
     /** Can be used with {@link #setVideoEncoder}. */
-    public final static int VIDEO_H264 = 0x01;
+    public final static int VIDEO_H264 = 1;
 
     /** Can be used with {@link #setVideoEncoder}. */
-    public final static int VIDEO_H263 = 0x02;
+    public final static int VIDEO_H263 = 2;
 
     /** Can be used with {@link #setAudioEncoder}. */
-    public final static int AUDIO_NONE = 0x00;
+    public final static int AUDIO_NONE = 0;
 
     /** Can be used with {@link #setAudioEncoder}. */
-    public final static int AUDIO_AMRNB = 0x03;
+    public final static int AUDIO_AMRNB = 3;
 
     /** Can be used with {@link #setAudioEncoder}. */
-    public final static int AUDIO_AAC = 0x05;
+    public final static int AUDIO_AAC = 5;
 
     // Default configuration
-    private VideoQuality mVideoQuality = VideoQuality.defaultVideoQualiy.clone();
+    private VideoQuality mVideoQuality = VideoQuality.DEFAULT_VIDEO_QUALITY;
+    private AudioQuality mAudioQuality = AudioQuality.DEFAULT_AUDIO_QUALITY;
     private Context mContext;
     private int mVideoEncoder = VIDEO_H263;
     private int mAudioEncoder = AUDIO_AMRNB;
     private int mCamera = CameraInfo.CAMERA_FACING_BACK;
     private int mTimeToLive = 64;
+    private int mOrientation = 0;
     private boolean mFlash = false;
-    private SurfaceHolder mSurfaceHolder = null;
-    private InetAddress mOrigin = null;
-    private InetAddress mDestination = null;
+    private SurfaceView mSurfaceView = null;
+    private String mOrigin = null;
+    private String mDestination = null;
+    private Session.Callback mCallback = null;
 
     // Removes the default public constructor
     private SessionBuilder() {}
@@ -98,14 +99,14 @@ public class SessionBuilder {
      * @return The new Session
      * @throws IOException
      */
-    public Session build() throws IOException {
+    public Session build() {
         Session session;
 
         session = new Session();
-        session.setContext(mContext);
         session.setOrigin(mOrigin);
         session.setDestination(mDestination);
         session.setTimeToLive(mTimeToLive);
+        session.setCallback(mCallback);
 
         switch (mAudioEncoder) {
             case AUDIO_AAC:
@@ -135,12 +136,14 @@ public class SessionBuilder {
             VideoStream video = session.getVideoTrack();
             video.setFlashState(mFlash);
             video.setVideoQuality(mVideoQuality);
-            video.setPreviewDisplay(mSurfaceHolder);
+            video.setSurfaceView(mSurfaceView);
+            video.setPreviewOrientation(mOrientation);
             video.setDestinationPorts(5006);
         }
 
         if (session.getAudioTrack()!=null) {
             AudioStream audio = session.getAudioTrack();
+            audio.setAudioQuality(mAudioQuality);
             audio.setDestinationPorts(5004);
         }
 
@@ -158,26 +161,32 @@ public class SessionBuilder {
     }
 
     /** Sets the destination of the session. */
-    public SessionBuilder setDestination(InetAddress destination) {
+    public SessionBuilder setDestination(String destination) {
         mDestination = destination;
         return this;
     }
 
     /** Sets the origin of the session. It appears in the SDP of the session. */
-    public SessionBuilder setOrigin(InetAddress origin) {
+    public SessionBuilder setOrigin(String origin) {
         mOrigin = origin;
         return this;
     }
 
     /** Sets the video stream quality. */
     public SessionBuilder setVideoQuality(VideoQuality quality) {
-        mVideoQuality = VideoQuality.merge(quality, mVideoQuality);
+        mVideoQuality = quality.clone();
         return this;
     }
 
     /** Sets the audio encoder. */
     public SessionBuilder setAudioEncoder(int encoder) {
         mAudioEncoder = encoder;
+        return this;
+    }
+
+    /** Sets the audio quality. */
+    public SessionBuilder setAudioQuality(AudioQuality quality) {
+        mAudioQuality = quality.clone();
         return this;
     }
 
@@ -203,11 +212,24 @@ public class SessionBuilder {
     }
 
     /**
-     * Sets the Surface required by MediaRecorder to record video.
-     * @param surfaceHolder A SurfaceHolder wrapping a valid surface
+     * Sets the SurfaceView required to preview the video stream.
      **/
-    public SessionBuilder setSurfaceHolder(SurfaceHolder surfaceHolder) {
-        mSurfaceHolder = surfaceHolder;
+    public SessionBuilder setSurfaceView(SurfaceView surfaceView) {
+        mSurfaceView = surfaceView;
+        return this;
+    }
+
+    /**
+     * Sets the orientation of the preview.
+     * @param orientation The orientation of the preview
+     */
+    public SessionBuilder setPreviewOrientation(int orientation) {
+        mOrientation = orientation;
+        return this;
+    }
+
+    public SessionBuilder setCallback(Session.Callback callback) {
+        mCallback = callback;
         return this;
     }
 
@@ -216,13 +238,13 @@ public class SessionBuilder {
         return mContext;
     }
 
-    /** Returns the destination ip address set with {@link #setDestination(InetAddress)}. */
-    public InetAddress getDestination() {
+    /** Returns the destination ip address set with {@link #setDestination(String)}. */
+    public String getDestination() {
         return mDestination;
     }
 
-    /** Returns the origin ip address set with {@link #setOrigin(InetAddress)}. */
-    public InetAddress getOrigin() {
+    /** Returns the origin ip address set with {@link #setOrigin(String)}. */
+    public String getOrigin() {
         return mOrigin;
     }
 
@@ -246,15 +268,21 @@ public class SessionBuilder {
         return mVideoQuality;
     }
 
+    /** Returns the AudioQuality set with {@link #setAudioQuality(AudioQuality)}. */
+    public AudioQuality getAudioQuality() {
+        return mAudioQuality;
+    }
+
     /** Returns the flash state set with {@link #setFlashEnabled(boolean)}. */
     public boolean getFlashState() {
         return mFlash;
     }
 
-    /** Returns the SurfaceHolder set with {@link #setSurfaceHolder(SurfaceHolder)}. */
-    public SurfaceHolder getSurfaceHolder() {
-        return mSurfaceHolder;
+    /** Returns the SurfaceView set with {@link #setSurfaceView(SurfaceView)}. */
+    public SurfaceView getSurfaceView() {
+        return mSurfaceView;
     }
+
 
     /** Returns the time to live set with {@link #setTimeToLive(int)}. */
     public int getTimeToLive() {
@@ -266,14 +294,17 @@ public class SessionBuilder {
         return new SessionBuilder()
                 .setDestination(mDestination)
                 .setOrigin(mOrigin)
-                .setSurfaceHolder(mSurfaceHolder)
+                .setSurfaceView(mSurfaceView)
+                .setPreviewOrientation(mOrientation)
                 .setVideoQuality(mVideoQuality)
                 .setVideoEncoder(mVideoEncoder)
                 .setFlashEnabled(mFlash)
                 .setCamera(mCamera)
                 .setTimeToLive(mTimeToLive)
                 .setAudioEncoder(mAudioEncoder)
-                .setContext(mContext);
+                .setAudioQuality(mAudioQuality)
+                .setContext(mContext)
+                .setCallback(mCallback);
     }
 
 }

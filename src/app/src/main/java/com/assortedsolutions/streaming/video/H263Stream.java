@@ -1,38 +1,37 @@
 /*
- * Copyright (C) 2011-2013 GUIGUI Simon, fyhertz@gmail.com
+ * Copyright (C) 2011-2015 GUIGUI Simon, fyhertz@gmail.com
  *
- * This file is part of Spydroid (http://code.google.com/p/spydroid-ipcamera/)
+ * This file is part of libstreaming (https://github.com/fyhertz/libstreaming)
  *
- * Spydroid is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This source code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License
- * along with this source code; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package com.assortedsolutions.streaming.video;
 
 import java.io.IOException;
-
+import com.assortedsolutions.streaming.SessionBuilder;
 import com.assortedsolutions.streaming.rtp.H263Packetizer;
+import android.graphics.ImageFormat;
 import android.hardware.Camera.CameraInfo;
 import android.media.MediaRecorder;
+import android.service.textservice.SpellCheckerService.Session;
 
 /**
  * A class for streaming H.263 from the camera of an android device using RTP.
- * Call {@link #setDestinationAddress(java.net.InetAddress)}, {@link #setDestinationPorts(int)},
- * {@link #setVideoSize(int, int)}, {@link #setVideoFramerate(int)} and {@link #setVideoEncodingBitrate(int)} and you're good to go.
- * You can then call {@link #prepare()} & {@link #start()}.
+ * You should use a {@link Session} instantiated with {@link SessionBuilder} instead of using this class directly.
+ * Call {@link #setDestinationAddress(InetAddress)}, {@link #setDestinationPorts(int)} and {@link #setVideoQuality(VideoQuality)}
+ * to configure the stream. You can then call {@link #start()} to start the RTP stream.
  * Call {@link #stop()} to stop the stream.
- * Finally, do not forget to call {@link #release()} when you're done.
  */
 public class H263Stream extends VideoStream {
 
@@ -50,21 +49,35 @@ public class H263Stream extends VideoStream {
      * @param cameraId Can be either CameraInfo.CAMERA_FACING_BACK or CameraInfo.CAMERA_FACING_FRONT
      * @throws IOException
      */
-    public H263Stream(int cameraId) throws IOException {
+    public H263Stream(int cameraId) {
         super(cameraId);
-        setVideoEncoder(MediaRecorder.VideoEncoder.H263);
+        mCameraImageFormat = ImageFormat.NV21;
+        mVideoEncoder = MediaRecorder.VideoEncoder.H263;
         mPacketizer = new H263Packetizer();
+    }
+
+    /**
+     * Starts the stream.
+     */
+    public synchronized void start() throws IllegalStateException, IOException {
+        if (!mStreaming) {
+            configure();
+            super.start();
+        }
+    }
+
+    public synchronized void configure() throws IllegalStateException, IOException {
+        super.configure();
+        mMode = MODE_MEDIARECORDER_API;
+        mQuality = mRequestedQuality.clone();
     }
 
     /**
      * Returns a description of the stream using SDP. It can then be included in an SDP file.
      */
-    public String generateSessionDescription() throws IllegalStateException,
-            IOException {
-
+    public String getSessionDescription() {
         return "m=video "+String.valueOf(getDestinationPorts()[0])+" RTP/AVP 96\r\n" +
                 "a=rtpmap:96 H263-1998/90000\r\n";
-
     }
 
 }

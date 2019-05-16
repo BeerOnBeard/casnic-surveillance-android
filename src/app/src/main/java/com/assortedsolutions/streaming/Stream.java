@@ -1,26 +1,25 @@
 /*
- * Copyright (C) 2011-2013 GUIGUI Simon, fyhertz@gmail.com
+ * Copyright (C) 2011-2015 GUIGUI Simon, fyhertz@gmail.com
  *
- * This file is part of Spydroid (http://code.google.com/p/spydroid-ipcamera/)
+ * This file is part of libstreaming (https://github.com/fyhertz/libstreaming)
  *
- * Spydroid is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This source code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License
- * along with this source code; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package com.assortedsolutions.streaming;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.InetAddress;
 
 /**
@@ -28,10 +27,22 @@ import java.net.InetAddress;
  */
 public interface Stream {
 
-    public void start() throws IllegalStateException;
-    public void prepare() throws IllegalStateException,IOException;
+    /**
+     * Configures the stream. You need to call this before calling {@link #getSessionDescription()}
+     * to apply your configuration of the stream.
+     */
+    public void configure() throws IllegalStateException, IOException;
+
+    /**
+     * Starts the stream.
+     * This method can only be called after {@link Stream#configure()}.
+     */
+    public void start() throws IllegalStateException, IOException;
+
+    /**
+     * Stops the stream.
+     */
     public void stop();
-    public void release();
 
     /**
      * Sets the Time To Live of packets sent over the network.
@@ -64,6 +75,13 @@ public interface Stream {
     public void setDestinationPorts(int rtpPort, int rtcpPort);
 
     /**
+     * If a TCP is used as the transport protocol for the RTP session,
+     * the output stream to which RTP packets will be written to must
+     * be specified with this method.
+     */
+    public void setOutputStream(OutputStream stream, byte channelIdentifier);
+
+    /**
      * Returns a pair of source ports, the first one is the
      * one used for RTP and the second one is used for RTCP.
      **/
@@ -75,15 +93,24 @@ public interface Stream {
      **/
     public int[] getDestinationPorts();
 
+
+    /**
+     * Returns the SSRC of the underlying {@link com.assortedsolutions.streaming.rtp.RtpSocket}.
+     * @return the SSRC of the stream.
+     */
     public int getSSRC();
 
     /**
-     * The SSRC identifier of the stream.
-     * @return The SSRC
-     * @throws IllegalStateException
-     * @throws IOException
+     * Returns an approximation of the bit rate consumed by the stream in bit per seconde.
      */
-    public String generateSessionDescription() throws IllegalStateException, IOException;
+    public long getBitrate();
+
+    /**
+     * Returns a description of the stream using SDP.
+     * This method can only be called after {@link Stream#configure()}.
+     * @throws IllegalStateException Thrown when {@link Stream#configure()} wa not called.
+     */
+    public String getSessionDescription() throws IllegalStateException;
 
     public boolean isStreaming();
 

@@ -1,29 +1,33 @@
 /*
- * Copyright (C) 2011-2013 GUIGUI Simon, fyhertz@gmail.com
+ * Copyright (C) 2011-2015 GUIGUI Simon, fyhertz@gmail.com
  *
- * This file is part of Spydroid (http://code.google.com/p/spydroid-ipcamera/)
+ * This file is part of libstreaming (https://github.com/fyhertz/libstreaming)
  *
- * Spydroid is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This source code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License
- * along with this source code; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package com.assortedsolutions.streaming.rtcp;
 
+import static com.assortedsolutions.streaming.rtp.RtpSocket.TRANSPORT_TCP;
+import static com.assortedsolutions.streaming.rtp.RtpSocket.TRANSPORT_UDP;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
+import java.nio.channels.IllegalSelectorException;
+import android.os.SystemClock;
+import android.util.Log;
 
 /**
  * Implementation of Sender Report RTCP packets.
@@ -32,14 +36,28 @@ public class SenderReport {
 
     public static final int MTU = 1500;
 
+    private static final int PACKET_LENGTH = 28;
+
     private MulticastSocket usock;
     private DatagramPacket upack;
 
-    private byte[] buffer = new byte[MTU];
-    private int ssrc, port = -1;
-    private int octetCount = 0, packetCount = 0;
+    private int mTransport;
+    private OutputStream mOutputStream = null;
+    private byte[] mBuffer = new byte[MTU];
+    private int mSSRC, mPort = -1;
+    private int mOctetCount = 0, mPacketCount = 0;
+    private long interval, delta, now, oldnow;
+    private byte mTcpHeader[];
 
-    public SenderReport() throws IOException {
+    public SenderReport(int ssrc) throws IOException {
+        super();
+        this.mSSRC = ssrc;
+    }
+
+    public SenderReport() {
+
+        mTransport = TRANSPORT_UDP;
+        mTcpHeader = new byte[] {'$',0,0,PACKET_LENGTH};
 
         /*							     Version(2)  Padding(0)					 					*/
         /*									 ^		  ^			PT = 0	    						*/
@@ -48,13 +66,13 @@ public class SenderReport {
         /*									 | |---------------------								*/
         /*									 | ||													*/
         /*									 | ||													*/
-        buffer[0] = (byte) Integer.parseInt("10000000",2);
+        mBuffer[0] = (byte) Integer.parseInt("10000000",2);
 
         /* Packet Type PT */
-        buffer[1] = (byte) 200;
+        mBuffer[1] = (byte) 200;
 
         /* Byte 2,3          ->  Length		                     */
-        setLong(28/4-1, 2, 4);
+        setLong(PACKET_LENGTH/4-1, 2, 4);
 
         /* Byte 4,5,6,7      ->  SSRC                            */
         /* Byte 8,9,10,11    ->  NTP timestamp hb				 */
@@ -63,8 +81,16 @@ public class SenderReport {
         /* Byte 20,21,22,23  ->  packet count				 	 */
         /* Byte 24,25,26,27  ->  octet count			         */
 
-        usock = new MulticastSocket();
-        upack = new DatagramPacket(buffer, 1);
+        try {
+            usock = new MulticastSocket();
+        } catch (IOException e) {
+            // Very unlikely to happen. Means that all UDP ports are already being used
+            throw new RuntimeException(e.getMessage());
+        }
+        upack = new DatagramPacket(mBuffer, 1);
+
+        // By default we sent one report every 3 secconde
+        interval = 3000;
 
     }
 
@@ -72,64 +98,69 @@ public class SenderReport {
         usock.close();
     }
 
-    /** Sends the RTCP packet over the network. */
-    public void send() throws IOException {
-        upack.setLength(28);
-        usock.send(upack);
-    }
-
-    /** Sends the RTCP packet over the network. */
-    public void send(long ntpts, long rtpts) throws IOException {
-        long hb = ntpts/1000000000;
-        long lb = ( ( ntpts - hb*1000000000 ) * 4294967296L )/1000000000;
-        setLong(hb, 8, 12);
-        setLong(lb, 12, 16);
-        setLong(rtpts, 16, 20);
-        upack.setLength(28);
-        usock.send(upack);
+    /**
+     * Sets the temporal interval between two RTCP Sender Reports.
+     * Default interval is set to 3 seconds.
+     * Set 0 to disable RTCP.
+     * @param interval The interval in milliseconds
+     */
+    public void setInterval(long interval) {
+        this.interval = interval;
     }
 
     /**
      * Updates the number of packets sent, and the total amount of data sent.
      * @param length The length of the packet
+     * @param rtpts
+     *            The RTP timestamp.
+     * @throws IOException
      **/
-    public void update(int length) {
-        packetCount += 1;
-        octetCount += length;
-        setLong(packetCount, 20, 24);
-        setLong(octetCount, 24, 28);
-    }
+    public void update(int length, long rtpts) throws IOException {
+        mPacketCount += 1;
+        mOctetCount += length;
+        setLong(mPacketCount, 20, 24);
+        setLong(mOctetCount, 24, 28);
 
-    /** Sets the RTP timestamp of the sender report. */
-    public void setRtpTimestamp(long ts) {
-        setLong(ts, 16, 20);
-    }
+        now = SystemClock.elapsedRealtime();
+        delta += oldnow != 0 ? now-oldnow : 0;
+        oldnow = now;
+        if (interval>0 && delta>=interval) {
+            // We send a Sender Report
+            send(System.nanoTime(), rtpts);
+            delta = 0;
+        }
 
-    /** Sets the NTP timestamp of the sender report. */
-    public void setNtpTimestamp(long ts) {
-        long hb = ts/1000000000;
-        long lb = ( ( ts - hb*1000000000 ) * 4294967296L )/1000000000;
-        setLong(hb, 8, 12);
-        setLong(lb, 12, 16);
     }
 
     public void setSSRC(int ssrc) {
-        this.ssrc = ssrc;
+        this.mSSRC = ssrc;
         setLong(ssrc,4,8);
-        packetCount = 0;
-        octetCount = 0;
-        setLong(packetCount, 20, 24);
-        setLong(octetCount, 24, 28);
+        mPacketCount = 0;
+        mOctetCount = 0;
+        setLong(mPacketCount, 20, 24);
+        setLong(mOctetCount, 24, 28);
     }
 
     public void setDestination(InetAddress dest, int dport) {
-        port = dport;
+        mTransport = TRANSPORT_UDP;
+        mPort = dport;
         upack.setPort(dport);
         upack.setAddress(dest);
     }
 
+    /**
+     * If a TCP is used as the transport protocol for the RTP session,
+     * the output stream to which RTP packets will be written to must
+     * be specified with this method.
+     */
+    public void setOutputStream(OutputStream os, byte channelIdentifier) {
+        mTransport = TRANSPORT_TCP;
+        mOutputStream = os;
+        mTcpHeader[1] = channelIdentifier;
+    }
+
     public int getPort() {
-        return port;
+        return mPort;
     }
 
     public int getLocalPort() {
@@ -137,14 +168,53 @@ public class SenderReport {
     }
 
     public int getSSRC() {
-        return ssrc;
+        return mSSRC;
+    }
+
+    /**
+     * Resets the reports (total number of bytes sent, number of packets sent, etc.)
+     */
+    public void reset() {
+        mPacketCount = 0;
+        mOctetCount = 0;
+        setLong(mPacketCount, 20, 24);
+        setLong(mOctetCount, 24, 28);
+        delta = now = oldnow = 0;
     }
 
     private void setLong(long n, int begin, int end) {
         for (end--; end >= begin; end--) {
-            buffer[end] = (byte) (n % 256);
+            mBuffer[end] = (byte) (n % 256);
             n >>= 8;
         }
     }
+
+    /**
+     * Sends the RTCP packet over the network.
+     *
+     * @param ntpts
+     *            the NTP timestamp.
+     * @param rtpts
+     *            the RTP timestamp.
+     */
+    private void send(long ntpts, long rtpts) throws IOException {
+        long hb = ntpts/1000000000;
+        long lb = ( ( ntpts - hb*1000000000 ) * 4294967296L )/1000000000;
+        setLong(hb, 8, 12);
+        setLong(lb, 12, 16);
+        setLong(rtpts, 16, 20);
+        if (mTransport == TRANSPORT_UDP) {
+            upack.setLength(PACKET_LENGTH);
+            usock.send(upack);
+        } else {
+            synchronized (mOutputStream) {
+                try {
+                    mOutputStream.write(mTcpHeader);
+                    mOutputStream.write(mBuffer, 0, PACKET_LENGTH);
+                } catch (Exception e) {}
+            }
+        }
+    }
+
 
 }

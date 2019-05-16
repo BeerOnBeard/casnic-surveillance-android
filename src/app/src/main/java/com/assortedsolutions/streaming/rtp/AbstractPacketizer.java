@@ -1,30 +1,28 @@
 /*
- * Copyright (C) 2011 GUIGUI Simon, fyhertz@gmail.com
+ * Copyright (C) 2011-2015 GUIGUI Simon, fyhertz@gmail.com
  *
- * This file is part of Spydroid (http://code.google.com/p/spydroid-ipcamera/)
+ * This file is part of libstreaming (https://github.com/fyhertz/libstreaming)
  *
- * Spydroid is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * This source code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * You should have received a copy of the GNU General Public License
- * along with this source code; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package com.assortedsolutions.streaming.rtp;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.InetAddress;
 import java.util.Random;
-
 import com.assortedsolutions.streaming.rtcp.SenderReport;
 
 /**
@@ -36,35 +34,28 @@ abstract public class AbstractPacketizer {
 
     protected static final int rtphl = RtpSocket.RTP_HEADER_LENGTH;
 
+    // Maximum size of RTP packets
+    protected final static int MAXPACKETSIZE = RtpSocket.MTU-28;
+
     protected RtpSocket socket = null;
-    protected SenderReport report = null;
     protected InputStream is = null;
     protected byte[] buffer;
 
-    protected long ts = 0, intervalBetweenReports = 5000, delta = 0;
+    protected long ts = 0;
 
-    public AbstractPacketizer() throws IOException {
+    public AbstractPacketizer() {
         int ssrc = new Random().nextInt();
         ts = new Random().nextInt();
         socket = new RtpSocket();
-        report = new SenderReport();
         socket.setSSRC(ssrc);
-        report.setSSRC(ssrc);
-        buffer = socket.getBuffer();
     }
 
     public RtpSocket getRtpSocket() {
         return socket;
     }
 
-    public SenderReport getRtcpSocket() {
-        return report;
-    }
-
-
     public void setSSRC(int ssrc) {
         socket.setSSRC(ssrc);
-        report.setSSRC(ssrc);
     }
 
     public int getSSRC() {
@@ -86,53 +77,84 @@ abstract public class AbstractPacketizer {
      * @param rtcpPort Destination port that will be used for RTCP
      */
     public void setDestination(InetAddress dest, int rtpPort, int rtcpPort) {
-        socket.setDestination(dest, rtpPort);
-        report.setDestination(dest, rtcpPort);
+        socket.setDestination(dest, rtpPort, rtcpPort);
     }
 
-    /**
-     * Sets the temporal interval between two RTCP Sender Reports.
-     * Default interval is set to 5 secondes.
-     * Set 0 to disable RTCP.
-     * @param interval The interval in milliseconds
-     */
-    public void setSenderReportsInterval(long interval) {
-        intervalBetweenReports = interval;
-    }
+    /** Starts the packetizer. */
+    public abstract void start();
 
-    public abstract void start() throws IOException;
-
+    /** Stops the packetizer. */
     public abstract void stop();
 
+    /** Updates data for RTCP SR and sends the packet. */
     protected void send(int length) throws IOException {
-        socket.send(length);
-        report.update(length);
+        socket.commitBuffer(length);
     }
 
-    // Useful for debug
+    /** For debugging purposes. */
     protected static String printBuffer(byte[] buffer, int start,int end) {
         String str = "";
         for (int i=start;i<end;i++) str+=","+Integer.toHexString(buffer[i]&0xFF);
         return str;
     }
 
+    /** Used in packetizers to estimate timestamps in RTP packets. */
     protected static class Statistics {
 
-        public final static int COUNT=50;
-        private float m = 0, q = 0;
+        public final static String TAG = "Statistics";
 
-        public void init(long value) {
-            m = value;
-            q = COUNT;
+        private int count=700, c = 0;
+        private float m = 0, q = 0;
+        private long elapsed = 0;
+        private long start = 0;
+        private long duration = 0;
+        private long period = 10000000000L;
+        private boolean initoffset = false;
+
+        public Statistics() {}
+
+        public Statistics(int count, int period) {
+            this.count = count;
+            this.period = period;
         }
 
-        public void push(long duration) {
-            m = (m*q+duration)/(q+1);
-            if (q<COUNT) q++;
+        public void reset() {
+            initoffset = false;
+            q = 0; m = 0; c = 0;
+            elapsed = 0;
+            start = 0;
+            duration = 0;
+        }
+
+        public void push(long value) {
+            elapsed += value;
+            if (elapsed>period) {
+                elapsed = 0;
+                long now = System.nanoTime();
+                if (!initoffset || (now - start < 0)) {
+                    start = now;
+                    duration = 0;
+                    initoffset = true;
+                }
+                // Prevents drifting issues by comparing the real duration of the
+                // stream with the sum of all temporal lengths of RTP packets.
+                value += (now - start) - duration;
+                //Log.d(TAG, "sum1: "+duration/1000000+" sum2: "+(now-start)/1000000+" drift: "+((now-start)-duration)/1000000+" v: "+value/1000000);
+            }
+            if (c<5) {
+                // We ignore the first 20 measured values because they may not be accurate
+                c++;
+                m = value;
+            } else {
+                m = (m*q+value)/(q+1);
+                if (q<count) q++;
+            }
         }
 
         public long average() {
-            return (long)m;
+            long l = (long)m;
+            duration += l;
+            return l;
         }
 
     }
