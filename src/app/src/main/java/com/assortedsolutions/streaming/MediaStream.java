@@ -39,8 +39,8 @@ import android.util.Log;
  * A MediaRecorder that streams what it records using a packetizer from the RTP package.
  * You can't use this class directly !
  */
-public abstract class MediaStream implements Stream {
-
+public abstract class MediaStream implements Stream
+{
     protected static final String TAG = "MediaStream";
 
     /** Raw audio/video will be encoded using the MediaRecorder API. */
@@ -93,28 +93,35 @@ public abstract class MediaStream implements Stream {
     protected MediaRecorder mMediaRecorder;
     protected MediaCodec mMediaCodec;
 
-    static {
+    static
+    {
         // We determine whether or not the MediaCodec API should be used
-        try {
+        try
+        {
             Class.forName("android.media.MediaCodec");
+
             // Will be set to MODE_MEDIACODEC_API at some point...
             sSuggestedMode = MODE_MEDIACODEC_API;
             Log.i(TAG,"Phone supports the MediaCoded API");
-        } catch (ClassNotFoundException e) {
+        }
+        catch (ClassNotFoundException e)
+        {
             sSuggestedMode = MODE_MEDIARECORDER_API;
             Log.i(TAG,"Phone does not support the MediaCodec API");
         }
 
         // Starting lollipop, the LocalSocket API cannot be used anymore to feed
         // a MediaRecorder object for security reasons
-        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.KITKAT_WATCH) {
+        if (Build.VERSION.SDK_INT > Build.VERSION_CODES.KITKAT_WATCH)
+        {
             sPipeApi = PIPE_API_PFD;
         } else {
             sPipeApi = PIPE_API_LS;
         }
     }
 
-    public MediaStream() {
+    public MediaStream()
+    {
         mRequestedMode = sSuggestedMode;
         mMode = sSuggestedMode;
     }
@@ -123,7 +130,8 @@ public abstract class MediaStream implements Stream {
      * Sets the destination IP address of the stream.
      * @param dest The destination address of the stream
      */
-    public void setDestinationAddress(InetAddress dest) {
+    public void setDestinationAddress(InetAddress dest)
+    {
         mDestination = dest;
     }
 
@@ -135,11 +143,15 @@ public abstract class MediaStream implements Stream {
      * number will be used for RTCP.
      * @param dport The destination port
      */
-    public void setDestinationPorts(int dport) {
-        if (dport % 2 == 1) {
+    public void setDestinationPorts(int dport)
+    {
+        if (dport % 2 == 1)
+        {
             mRtpPort = dport-1;
             mRtcpPort = dport;
-        } else {
+        }
+        else
+        {
             mRtpPort = dport;
             mRtcpPort = dport+1;
         }
@@ -150,7 +162,8 @@ public abstract class MediaStream implements Stream {
      * @param rtpPort Destination port that will be used for RTP
      * @param rtcpPort Destination port that will be used for RTCP
      */
-    public void setDestinationPorts(int rtpPort, int rtcpPort) {
+    public void setDestinationPorts(int rtpPort, int rtcpPort)
+    {
         mRtpPort = rtpPort;
         mRtcpPort = rtcpPort;
         mOutputStream = null;
@@ -161,7 +174,8 @@ public abstract class MediaStream implements Stream {
      * the output stream to which RTP packets will be written to must
      * be specified with this method.
      */
-    public void setOutputStream(OutputStream stream, byte channelIdentifier) {
+    public void setOutputStream(OutputStream stream, byte channelIdentifier)
+    {
         mOutputStream = stream;
         mChannelIdentifier = channelIdentifier;
     }
@@ -170,9 +184,9 @@ public abstract class MediaStream implements Stream {
     /**
      * Sets the Time To Live of packets sent over the network.
      * @param ttl The time to live
-     * @throws IOException
      */
-    public void setTimeToLive(int ttl) throws IOException {
+    public void setTimeToLive(int ttl)
+    {
         mTTL = ttl;
     }
 
@@ -180,18 +194,17 @@ public abstract class MediaStream implements Stream {
      * Returns a pair of destination ports, the first one is the
      * one used for RTP and the second one is used for RTCP.
      **/
-    public int[] getDestinationPorts() {
-        return new int[] {
-                mRtpPort,
-                mRtcpPort
-        };
+    public int[] getDestinationPorts()
+    {
+        return new int[] { mRtpPort, mRtcpPort };
     }
 
     /**
      * Returns a pair of source ports, the first one is the
      * one used for RTP and the second one is used for RTCP.
      **/
-    public int[] getLocalPorts() {
+    public int[] getLocalPorts()
+    {
         return mPacketizer.getRtpSocket().getLocalPorts();
     }
 
@@ -209,7 +222,8 @@ public abstract class MediaStream implements Stream {
      *
      * @param mode Can be {@link #MODE_MEDIARECORDER_API}, {@link #MODE_MEDIACODEC_API} or {@link #MODE_MEDIACODEC_API_2}
      */
-    public void setStreamingMethod(byte mode) {
+    public void setStreamingMethod(byte mode)
+    {
         mRequestedMode = mode;
     }
 
@@ -217,7 +231,8 @@ public abstract class MediaStream implements Stream {
      * Returns the streaming method in use, call this after
      * {@link #configure()} to get an accurate response.
      */
-    public byte getStreamingMethod() {
+    public byte getStreamingMethod()
+    {
         return mMode;
     }
 
@@ -225,14 +240,16 @@ public abstract class MediaStream implements Stream {
      * Returns the packetizer associated with the {@link MediaStream}.
      * @return The packetizer
      */
-    public AbstractPacketizer getPacketizer() {
+    public AbstractPacketizer getPacketizer()
+    {
         return mPacketizer;
     }
 
     /**
      * Returns an approximation of the bit rate consumed by the stream in bit per seconde.
      */
-    public long getBitrate() {
+    public long getBitrate()
+    {
         return !mStreaming ? 0 : mPacketizer.getRtpSocket().getBitrate();
     }
 
@@ -240,7 +257,8 @@ public abstract class MediaStream implements Stream {
      * Indicates if the {@link MediaStream} is streaming.
      * @return A boolean indicating if the {@link MediaStream} is streaming
      */
-    public boolean isStreaming() {
+    public boolean isStreaming()
+    {
         return mStreaming;
     }
 
@@ -250,57 +268,77 @@ public abstract class MediaStream implements Stream {
      * for a {@link VideoStream} and {@link AudioStream#setAudioQuality(com.assortedsolutions.streaming.audio.AudioQuality)}
      * for a {@link AudioStream}.
      */
-    public synchronized void configure() throws IllegalStateException, IOException {
-        if (mStreaming) throw new IllegalStateException("Can't be called while streaming.");
-        if (mPacketizer != null) {
+    public synchronized void configure() throws IllegalStateException, IOException
+    {
+        if (mStreaming)
+        {
+            throw new IllegalStateException("Configure cannot be called while streaming.");
+        }
+
+        if (mPacketizer != null)
+        {
             mPacketizer.setDestination(mDestination, mRtpPort, mRtcpPort);
             mPacketizer.getRtpSocket().setOutputStream(mOutputStream, mChannelIdentifier);
         }
+
         mMode = mRequestedMode;
         mConfigured = true;
     }
 
-    /** Starts the stream. */
-    public synchronized void start() throws IllegalStateException, IOException {
-
-        if (mDestination==null)
+    public synchronized void start() throws IllegalStateException, IOException
+    {
+        if (mDestination == null)
+        {
             throw new IllegalStateException("No destination ip address set for the stream !");
+        }
 
-        if (mRtpPort<=0 || mRtcpPort<=0)
+        if (mRtpPort <= 0 || mRtcpPort <= 0)
+        {
             throw new IllegalStateException("No destination ports set for the stream !");
+        }
 
         mPacketizer.setTimeToLive(mTTL);
 
-        if (mMode != MODE_MEDIARECORDER_API) {
+        if (mMode != MODE_MEDIARECORDER_API)
+        {
             encodeWithMediaCodec();
-        } else {
+        }
+        else
+        {
             encodeWithMediaRecorder();
         }
-
     }
 
-    /** Stops the stream. */
-    @SuppressLint("NewApi")
-    public synchronized  void stop() {
-        if (mStreaming) {
-            try {
-                if (mMode==MODE_MEDIARECORDER_API) {
-                    mMediaRecorder.stop();
-                    mMediaRecorder.release();
-                    mMediaRecorder = null;
-                    closeSockets();
-                    mPacketizer.stop();
-                } else {
-                    mPacketizer.stop();
-                    mMediaCodec.stop();
-                    mMediaCodec.release();
-                    mMediaCodec = null;
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            mStreaming = false;
+    public synchronized void stop()
+    {
+        if (!mStreaming) {
+            return;
         }
+
+        try
+        {
+            if (mMode == MODE_MEDIARECORDER_API)
+            {
+                mMediaRecorder.stop();
+                mMediaRecorder.release();
+                mMediaRecorder = null;
+                closeSockets();
+                mPacketizer.stop();
+            }
+            else
+            {
+                mPacketizer.stop();
+                mMediaCodec.stop();
+                mMediaCodec.release();
+                mMediaCodec = null;
+            }
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+
+        mStreaming = false;
     }
 
     protected abstract void encodeWithMediaRecorder() throws IOException;
@@ -318,32 +356,39 @@ public abstract class MediaStream implements Stream {
      * Returns the SSRC of the underlying {@link com.assortedsolutions.streaming.rtp.RtpSocket}.
      * @return the SSRC of the stream
      */
-    public int getSSRC() {
+    public int getSSRC()
+    {
         return getPacketizer().getSSRC();
     }
 
-    protected void createSockets() throws IOException {
-
-        if (sPipeApi == PIPE_API_LS) {
-
+    protected void createSockets() throws IOException
+    {
+        if (sPipeApi == PIPE_API_LS)
+        {
             final String LOCAL_ADDR = "com.assortedsolutions.streaming-";
 
-            for (int i=0;i<10;i++) {
-                try {
+            for (int i = 0; i < 10; i++)
+            {
+                try
+                {
                     mSocketId = new Random().nextInt();
                     mLss = new LocalServerSocket(LOCAL_ADDR+mSocketId);
                     break;
-                } catch (IOException e1) {}
+                }
+                catch (IOException e1)
+                {
+                }
             }
 
             mReceiver = new LocalSocket();
-            mReceiver.connect( new LocalSocketAddress(LOCAL_ADDR+mSocketId));
+            mReceiver.connect(new LocalSocketAddress(LOCAL_ADDR + mSocketId));
             mReceiver.setReceiveBufferSize(500000);
             mReceiver.setSoTimeout(3000);
             mSender = mLss.accept();
             mSender.setSendBufferSize(500000);
-
-        } else {
+        }
+        else
+        {
             Log.e(TAG, "parcelFileDescriptors createPipe version = Lollipop");
             mParcelFileDescriptors = ParcelFileDescriptor.createPipe();
             mParcelRead = new ParcelFileDescriptor(mParcelFileDescriptors[0]);
@@ -351,43 +396,66 @@ public abstract class MediaStream implements Stream {
         }
     }
 
-    protected void closeSockets() {
-        if (sPipeApi == PIPE_API_LS) {
-            try {
+    protected void closeSockets()
+    {
+        if (sPipeApi == PIPE_API_LS)
+        {
+            try
+            {
                 mReceiver.close();
-            } catch (Exception e) {
+            }
+            catch (Exception e)
+            {
                 e.printStackTrace();
             }
-            try {
+
+            try
+            {
                 mSender.close();
-            } catch (Exception e) {
+            }
+            catch (Exception e)
+            {
                 e.printStackTrace();
             }
-            try {
+
+            try
+            {
                 mLss.close();
-            } catch (Exception e) {
+            }
+            catch (Exception e)
+            {
                 e.printStackTrace();
             }
+
             mLss = null;
             mSender = null;
             mReceiver = null;
-
-        } else {
-            try {
-                if (mParcelRead != null) {
+        }
+        else
+        {
+            try
+            {
+                if (mParcelRead != null)
+                {
                     mParcelRead.close();
                 }
-            } catch (Exception e) {
+            }
+            catch (Exception e)
+            {
                 e.printStackTrace();
             }
-            try {
-                if (mParcelWrite != null) {
+
+            try
+            {
+                if (mParcelWrite != null)
+                {
                     mParcelWrite.close();
                 }
-            } catch (Exception e) {
+            }
+            catch (Exception e)
+            {
                 e.printStackTrace();
             }
         }
     }
-
 }

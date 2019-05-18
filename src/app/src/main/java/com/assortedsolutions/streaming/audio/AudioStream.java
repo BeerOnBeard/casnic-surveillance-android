@@ -30,8 +30,8 @@ import android.util.Log;
 /**
  * Don't use this class directly.
  */
-public abstract class AudioStream  extends MediaStream {
-
+public abstract class AudioStream extends MediaStream
+{
     protected int mAudioSource;
     protected int mOutputFormat;
     protected int mAudioEncoder;
@@ -66,12 +66,12 @@ public abstract class AudioStream  extends MediaStream {
     }
 
     @Override
-    protected void encodeWithMediaRecorder() throws IOException {
-
+    protected void encodeWithMediaRecorder() throws IOException
+    {
         // We need a local socket to forward data output by the camera to the packetizer
         createSockets();
 
-        Log.v(TAG,"Requested audio with "+mQuality.bitRate/1000+"kbps"+" at "+mQuality.samplingRate/1000+"kHz");
+        Log.v(TAG,"Requested audio with " + mQuality.bitRate / 1000 + "kbps" + " at " + mQuality.samplingRate / 1000 + "kHz");
 
         mMediaRecorder = new MediaRecorder();
         mMediaRecorder.setAudioSource(mAudioSource);
@@ -85,11 +85,15 @@ public abstract class AudioStream  extends MediaStream {
         // This one little trick makes streaming feasible quiet simply: data from the camera
         // can then be manipulated at the other end of the socket
         FileDescriptor fd = null;
-        if (sPipeApi == PIPE_API_PFD) {
+        if (sPipeApi == PIPE_API_PFD)
+        {
             fd = mParcelWrite.getFileDescriptor();
-        } else  {
+        }
+        else
+        {
             fd = mSender.getFileDescriptor();
         }
+
         mMediaRecorder.setOutputFile(fd);
         mMediaRecorder.setOutputFile(fd);
 
@@ -98,15 +102,21 @@ public abstract class AudioStream  extends MediaStream {
 
         InputStream is = null;
 
-        if (sPipeApi == PIPE_API_PFD) {
+        if (sPipeApi == PIPE_API_PFD)
+        {
             is = new ParcelFileDescriptor.AutoCloseInputStream(mParcelRead);
-        } else  {
-            try {
+        }
+        else
+        {
+            try
+            {
                 // mReceiver.getInputStream contains the data from the camera
                 is = mReceiver.getInputStream();
-            } catch (IOException e) {
+            }
+            catch (IOException e)
+            {
                 stop();
-                throw new IOException("Something happened with the local sockets :/ Start failed !");
+                throw new IOException("Something happened with the local sockets :/ Start failed!", e);
             }
         }
 
@@ -114,7 +124,5 @@ public abstract class AudioStream  extends MediaStream {
         mPacketizer.setInputStream(is);
         mPacketizer.start();
         mStreaming = true;
-
     }
-
 }

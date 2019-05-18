@@ -35,8 +35,8 @@ import android.util.Log;
  * That way, if a packetizer tries to send many packets too quickly, the FIFO will
  * grow and packets will be sent one by one smoothly.
  */
-public class RtpSocket implements Runnable {
-
+public class RtpSocket implements Runnable
+{
     public static final String TAG = "RtpSocket";
 
     /** Use this to use UDP for the transport protocol. */
@@ -74,8 +74,8 @@ public class RtpSocket implements Runnable {
      * This RTP socket implements a buffering mechanism relying on a FIFO of buffers and a Thread.
      * @throws IOException
      */
-    public RtpSocket() {
-
+    public RtpSocket()
+    {
         mCacheSize = 0;
         mBufferCount = 300; // TODO: readjust that when the FIFO is full
         mBuffers = new byte[mBufferCount][];
@@ -83,12 +83,12 @@ public class RtpSocket implements Runnable {
         mReport = new SenderReport();
         mAverageBitrate = new AverageBitrate();
         mTransport = TRANSPORT_UDP;
-        mTcpHeader = new byte[] {'$',0,0,0};
+        mTcpHeader = new byte[] { '$', 0, 0, 0 };
 
         resetFifo();
 
-        for (int i=0; i<mBufferCount; i++) {
-
+        for (int i = 0; i < mBufferCount; i++)
+        {
             mBuffers[i] = new byte[MTU];
             mPackets[i] = new DatagramPacket(mBuffers[i], 1);
 
@@ -107,18 +107,20 @@ public class RtpSocket implements Runnable {
             /* Byte 2,3        ->  Sequence Number                   */
             /* Byte 4,5,6,7    ->  Timestamp                         */
             /* Byte 8,9,10,11  ->  Sync Source Identifier            */
-
         }
 
-        try {
+        try
+        {
             mSocket = new MulticastSocket();
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             throw new RuntimeException(e.getMessage());
         }
-
     }
 
-    private void resetFifo() {
+    private void resetFifo()
+    {
         mCount = 0;
         mBufferIn = 0;
         mBufferOut = 0;
@@ -135,11 +137,14 @@ public class RtpSocket implements Runnable {
     }
 
     /** Sets the SSRC of the stream. */
-    public void setSSRC(int ssrc) {
+    public void setSSRC(int ssrc)
+    {
         this.mSsrc = ssrc;
-        for (int i=0;i<mBufferCount;i++) {
+        for (int i = 0; i < mBufferCount; i++)
+        {
             setLong(mBuffers[i], ssrc,8,12);
         }
+
         mReport.setSSRC(mSsrc);
     }
 
@@ -159,19 +164,24 @@ public class RtpSocket implements Runnable {
     }
 
     /** Sets the Time To Live of the UDP packets. */
-    public void setTimeToLive(int ttl) throws IOException {
+    public void setTimeToLive(int ttl) throws IOException
+    {
         mSocket.setTimeToLive(ttl);
     }
 
     /** Sets the destination address and to which the packets will be sent. */
-    public void setDestination(InetAddress dest, int dport, int rtcpPort) {
-        if (dport != 0 && rtcpPort != 0) {
+    public void setDestination(InetAddress dest, int dport, int rtcpPort)
+    {
+        if (dport != 0 && rtcpPort != 0)
+        {
             mTransport = TRANSPORT_UDP;
             mPort = dport;
-            for (int i=0;i<mBufferCount;i++) {
+            for (int i = 0; i < mBufferCount; i++)
+            {
                 mPackets[i].setPort(dport);
                 mPackets[i].setAddress(dest);
             }
+
             mReport.setDestination(dest, rtcpPort);
         }
     }
@@ -181,8 +191,10 @@ public class RtpSocket implements Runnable {
      * the output stream to which RTP packets will be written to must
      * be specified with this method.
      */
-    public void setOutputStream(OutputStream outputStream, byte channelIdentifier) {
-        if (outputStream != null) {
+    public void setOutputStream(OutputStream outputStream, byte channelIdentifier)
+    {
+        if (outputStream != null)
+        {
             mTransport = TRANSPORT_TCP;
             mOutputStream = outputStream;
             mTcpHeader[1] = channelIdentifier;
@@ -194,12 +206,13 @@ public class RtpSocket implements Runnable {
         return mPort;
     }
 
-    public int[] getLocalPorts() {
-        return new int[] {
-                mSocket.getLocalPort(),
-                mReport.getLocalPort()
+    public int[] getLocalPorts()
+    {
+        return new int[]
+        {
+            mSocket.getLocalPort(),
+            mReport.getLocalPort()
         };
-
     }
 
     /**
@@ -207,49 +220,61 @@ public class RtpSocket implements Runnable {
      * Call {@link #commitBuffer(int)} to send it over the network.
      * @throws InterruptedException
      **/
-    public byte[] requestBuffer() throws InterruptedException {
+    public byte[] requestBuffer() throws InterruptedException
+    {
         mBufferRequested.acquire();
         mBuffers[mBufferIn][1] &= 0x7F;
         return mBuffers[mBufferIn];
     }
 
     /** Puts the buffer back into the FIFO without sending the packet. */
-    public void commitBuffer() throws IOException {
-
-        if (mThread == null) {
+    public void commitBuffer() throws IOException
+    {
+        if (mThread == null)
+        {
             mThread = new Thread(this);
             mThread.start();
         }
 
-        if (++mBufferIn>=mBufferCount) mBufferIn = 0;
-        mBufferCommitted.release();
+        if (++mBufferIn >= mBufferCount)
+        {
+            mBufferIn = 0;
+        }
 
+        mBufferCommitted.release();
     }
 
     /** Sends the RTP packet over the network. */
-    public void commitBuffer(int length) throws IOException {
+    public void commitBuffer(int length) throws IOException
+    {
         updateSequence();
         mPackets[mBufferIn].setLength(length);
 
         mAverageBitrate.push(length);
 
-        if (++mBufferIn>=mBufferCount) mBufferIn = 0;
+        if (++mBufferIn >= mBufferCount)
+        {
+            mBufferIn = 0;
+        }
+
         mBufferCommitted.release();
 
-        if (mThread == null) {
+        if (mThread == null)
+        {
             mThread = new Thread(this);
             mThread.start();
         }
-
     }
 
     /** Returns an approximation of the bitrate of the RTP stream in bits per second. */
-    public long getBitrate() {
+    public long getBitrate()
+    {
         return mAverageBitrate.average();
     }
 
     /** Increments the sequence number. */
-    private void updateSequence() {
+    private void updateSequence()
+    {
         setLong(mBuffers[mBufferIn], ++mSeq, 2, 4);
     }
 
@@ -257,77 +282,114 @@ public class RtpSocket implements Runnable {
      * Overwrites the timestamp in the packet.
      * @param timestamp The new timestamp in ns.
      **/
-    public void updateTimestamp(long timestamp) {
+    public void updateTimestamp(long timestamp)
+    {
         mTimestamps[mBufferIn] = timestamp;
-        setLong(mBuffers[mBufferIn], (timestamp/100L)*(mClock/1000L)/10000L, 4, 8);
+        setLong(mBuffers[mBufferIn], (timestamp / 100L) * (mClock / 1000L) / 10000L, 4, 8);
     }
 
     /** Sets the marker in the RTP packet. */
-    public void markNextPacket() {
+    public void markNextPacket()
+    {
         mBuffers[mBufferIn][1] |= 0x80;
     }
 
     /** The Thread sends the packets in the FIFO one by one at a constant rate. */
     @Override
-    public void run() {
+    public void run()
+    {
         Statistics stats = new Statistics(50,3000);
-        try {
+        try
+        {
             // Caches mCacheSize milliseconds of the stream in the FIFO.
             Thread.sleep(mCacheSize);
             long delta = 0;
-            while (mBufferCommitted.tryAcquire(4,TimeUnit.SECONDS)) {
-                if (mOldTimestamp != 0) {
+            while (mBufferCommitted.tryAcquire(4, TimeUnit.SECONDS))
+            {
+                if (mOldTimestamp != 0)
+                {
                     // We use our knowledge of the clock rate of the stream and the difference between two timestamps to
                     // compute the time lapse that the packet represents.
-                    if ((mTimestamps[mBufferOut]-mOldTimestamp)>0) {
-                        stats.push(mTimestamps[mBufferOut]-mOldTimestamp);
-                        long d = stats.average()/1000000;
+                    if ((mTimestamps[mBufferOut] - mOldTimestamp) > 0)
+                    {
+                        stats.push(mTimestamps[mBufferOut] - mOldTimestamp);
+                        long d = stats.average() / 1000000;
+
                         //Log.d(TAG,"delay: "+d+" d: "+(mTimestamps[mBufferOut]-mOldTimestamp)/1000000);
                         // We ensure that packets are sent at a constant and suitable rate no matter how the RtpSocket is used.
-                        if (mCacheSize>0) Thread.sleep(d);
-                    } else if ((mTimestamps[mBufferOut]-mOldTimestamp)<0) {
-                        Log.e(TAG, "TS: "+mTimestamps[mBufferOut]+" OLD: "+mOldTimestamp);
+                        if (mCacheSize > 0)
+                        {
+                            Thread.sleep(d);
+                        }
                     }
-                    delta += mTimestamps[mBufferOut]-mOldTimestamp;
-                    if (delta>500000000 || delta<0) {
+                    else if ((mTimestamps[mBufferOut] - mOldTimestamp) < 0)
+                    {
+                        Log.e(TAG, "TS: " + mTimestamps[mBufferOut] + " OLD: " + mOldTimestamp);
+                    }
+
+                    delta += mTimestamps[mBufferOut] - mOldTimestamp;
+                    if (delta > 500000000 || delta < 0)
+                    {
                         //Log.d(TAG,"permits: "+mBufferCommitted.availablePermits());
                         delta = 0;
                     }
                 }
-                mReport.update(mPackets[mBufferOut].getLength(), (mTimestamps[mBufferOut]/100L)*(mClock/1000L)/10000L);
+
+                mReport.update(mPackets[mBufferOut].getLength(), (mTimestamps[mBufferOut] / 100L) * (mClock / 1000L) / 10000L);
                 mOldTimestamp = mTimestamps[mBufferOut];
-                if (mCount++>30) {
-                    if (mTransport == TRANSPORT_UDP) {
+                if (mCount++ > 30)
+                {
+                    if (mTransport == TRANSPORT_UDP)
+                    {
                         mSocket.send(mPackets[mBufferOut]);
-                    } else {
+                    }
+                    else
+                    {
                         sendTCP();
                     }
                 }
-                if (++mBufferOut>=mBufferCount) mBufferOut = 0;
+
+                if (++mBufferOut >= mBufferCount)
+                {
+                    mBufferOut = 0;
+                }
+
                 mBufferRequested.release();
             }
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             e.printStackTrace();
         }
+
         mThread = null;
         resetFifo();
     }
 
-    private void sendTCP() {
-        synchronized (mOutputStream) {
+    private void sendTCP()
+    {
+        synchronized (mOutputStream)
+        {
             int len = mPackets[mBufferOut].getLength();
-            Log.d(TAG,"sent "+len);
-            mTcpHeader[2] = (byte) (len>>8);
-            mTcpHeader[3] = (byte) (len&0xFF);
-            try {
+            Log.d(TAG,"sent " + len);
+            mTcpHeader[2] = (byte) (len >> 8);
+            mTcpHeader[3] = (byte) (len & 0xFF);
+            try
+            {
                 mOutputStream.write(mTcpHeader);
                 mOutputStream.write(mBuffers[mBufferOut], 0, len);
-            } catch (Exception e) {}
+            }
+            catch (Exception e)
+            {
+                Log.e(TAG, "Writing to output stream threw", e);
+            }
         }
     }
 
-    private void setLong(byte[] buffer, long n, int begin, int end) {
-        for (end--; end >= begin; end--) {
+    private void setLong(byte[] buffer, long n, int begin, int end)
+    {
+        for (end--; end >= begin; end--)
+        {
             buffer[end] = (byte) (n % 256);
             n >>= 8;
         }
@@ -336,8 +398,8 @@ public class RtpSocket implements Runnable {
     /**
      * Computes an average bit rate.
      **/
-    protected static class AverageBitrate {
-
+    protected static class AverageBitrate
+    {
         private final static long RESOLUTION = 200;
 
         private long mOldNow, mNow, mDelta;
@@ -345,17 +407,20 @@ public class RtpSocket implements Runnable {
         private int mCount, mIndex, mTotal;
         private int mSize;
 
-        public AverageBitrate() {
-            mSize = 5000/((int)RESOLUTION);
+        public AverageBitrate()
+        {
+            mSize = 5000 / ((int)RESOLUTION);
             reset();
         }
 
-        public AverageBitrate(int delay) {
-            mSize = delay/((int)RESOLUTION);
+        public AverageBitrate(int delay)
+        {
+            mSize = delay / ((int)RESOLUTION);
             reset();
         }
 
-        public void reset() {
+        public void reset()
+        {
             mSum = new long[mSize];
             mElapsed = new long[mSize];
             mNow = SystemClock.elapsedRealtime();
@@ -366,42 +431,51 @@ public class RtpSocket implements Runnable {
             mIndex = 0;
         }
 
-        public void push(int length) {
+        public void push(int length)
+        {
             mNow = SystemClock.elapsedRealtime();
-            if (mCount>0) {
+            if (mCount > 0)
+            {
                 mDelta += mNow - mOldNow;
                 mTotal += length;
-                if (mDelta>RESOLUTION) {
+                if (mDelta > RESOLUTION)
+                {
                     mSum[mIndex] = mTotal;
                     mTotal = 0;
                     mElapsed[mIndex] = mDelta;
                     mDelta = 0;
                     mIndex++;
-                    if (mIndex>=mSize) mIndex = 0;
+                    if (mIndex >= mSize)
+                    {
+                        mIndex = 0;
+                    }
                 }
             }
+
             mOldNow = mNow;
             mCount++;
         }
 
-        public int average() {
+        public int average()
+        {
             long delta = 0, sum = 0;
-            for (int i=0;i<mSize;i++) {
+            for (int i = 0; i < mSize; i++)
+            {
                 sum += mSum[i];
                 delta += mElapsed[i];
             }
-            //Log.d(TAG, "Time elapsed: "+delta);
-            return (int) (delta>0?8000*sum/delta:0);
-        }
 
+            //Log.d(TAG, "Time elapsed: "+delta);
+            return (int) (delta > 0 ? 8000 * sum / delta : 0);
+        }
     }
 
     /** Computes the proper rate at which packets are sent. */
-    protected static class Statistics {
-
+    protected static class Statistics
+    {
         public final static String TAG = "Statistics";
 
-        private int count=500, c = 0;
+        private int count = 500, c = 0;
         private float m = 0, q = 0;
         private long elapsed = 0;
         private long start = 0;
@@ -409,40 +483,51 @@ public class RtpSocket implements Runnable {
         private long period = 6000000000L;
         private boolean initoffset = false;
 
-        public Statistics(int count, long period) {
+        public Statistics(int count, long period)
+        {
             this.count = count;
             this.period = period*1000000L;
         }
 
-        public void push(long value) {
+        public void push(long value)
+        {
             duration += value;
             elapsed += value;
-            if (elapsed>period) {
+            if (elapsed > period)
+            {
                 elapsed = 0;
                 long now = System.nanoTime();
-                if (!initoffset || (now - start < 0)) {
+                if (!initoffset || (now - start < 0))
+                {
                     start = now;
                     duration = 0;
                     initoffset = true;
                 }
+
                 value -= (now - start) - duration;
                 //Log.d(TAG, "sum1: "+duration/1000000+" sum2: "+(now-start)/1000000+" drift: "+((now-start)-duration)/1000000+" v: "+value/1000000);
             }
-            if (c<40) {
+
+            if (c < 40)
+            {
                 // We ignore the first 40 measured values because they may not be accurate
                 c++;
                 m = value;
-            } else {
-                m = (m*q+value)/(q+1);
-                if (q<count) q++;
+            }
+            else
+            {
+                m = (m * q + value) / (q + 1);
+                if (q < count)
+                {
+                    q++;
+                }
             }
         }
 
-        public long average() {
-            long l = (long)m-2000000;
-            return l>0 ? l : 0;
+        public long average()
+        {
+            long l = (long)(m - 2000000);
+            return l > 0 ? l : 0;
         }
-
     }
-
 }

@@ -18,8 +18,8 @@
 
 package com.assortedsolutions.streaming.exceptions;
 
-public class CameraInUseException extends RuntimeException {
-
+public class CameraInUseException extends RuntimeException
+{
     public CameraInUseException(String message) {
         super(message);
     }

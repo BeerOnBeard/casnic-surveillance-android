@@ -32,9 +32,8 @@ import android.util.Log;
  * The purpose of this class is to interface existing RTP packetizers of
  * libstreaming with the new MediaCodec API. This class is not thread safe !
  */
-@SuppressLint("NewApi")
-public class MediaCodecInputStream extends InputStream {
-
+public class MediaCodecInputStream extends InputStream
+{
     public final String TAG = "MediaCodecInputStream";
 
     private MediaCodec mMediaCodec = null;
@@ -46,7 +45,8 @@ public class MediaCodecInputStream extends InputStream {
 
     public MediaFormat mMediaFormat;
 
-    public MediaCodecInputStream(MediaCodec mediaCodec) {
+    public MediaCodecInputStream(MediaCodec mediaCodec)
+    {
         mMediaCodec = mediaCodec;
         mBuffers = mMediaCodec.getOutputBuffers();
     }
@@ -57,63 +57,82 @@ public class MediaCodecInputStream extends InputStream {
     }
 
     @Override
-    public int read() throws IOException {
-        return 0;
-    }
+    public int read() throws IOException { return 0; }
 
     @Override
-    public int read(byte[] buffer, int offset, int length) throws IOException {
+    public int read(byte[] buffer, int offset, int length) throws IOException
+    {
         int min = 0;
 
-        try {
-            if (mBuffer==null) {
-                while (!Thread.interrupted() && !mClosed) {
+        try
+        {
+            if (mBuffer == null)
+            {
+                while (!Thread.interrupted() && !mClosed)
+                {
                     mIndex = mMediaCodec.dequeueOutputBuffer(mBufferInfo, 500000);
-                    if (mIndex>=0 ){
+                    if (mIndex >= 0)
+                    {
                         //Log.d(TAG,"Index: "+mIndex+" Time: "+mBufferInfo.presentationTimeUs+" size: "+mBufferInfo.size);
                         mBuffer = mBuffers[mIndex];
                         mBuffer.position(0);
                         break;
-                    } else if (mIndex == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
+                    }
+                    else if (mIndex == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED)
+                    {
                         mBuffers = mMediaCodec.getOutputBuffers();
-                    } else if (mIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+                    }
+                    else if (mIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED)
+                    {
                         mMediaFormat = mMediaCodec.getOutputFormat();
                         Log.i(TAG,mMediaFormat.toString());
-                    } else if (mIndex == MediaCodec.INFO_TRY_AGAIN_LATER) {
+                    }
+                    else if (mIndex == MediaCodec.INFO_TRY_AGAIN_LATER)
+                    {
                         Log.v(TAG,"No buffer available...");
                         //return 0;
-                    } else {
+                    }
+                    else
+                    {
                         Log.e(TAG,"Message: "+mIndex);
                         //return 0;
                     }
                 }
             }
 
-            if (mClosed) throw new IOException("This InputStream was closed");
+            if (mClosed)
+            {
+                throw new IOException("This InputStream was closed");
+            }
 
             min = length < mBufferInfo.size - mBuffer.position() ? length : mBufferInfo.size - mBuffer.position();
             mBuffer.get(buffer, offset, min);
-            if (mBuffer.position()>=mBufferInfo.size) {
+            if (mBuffer.position() >= mBufferInfo.size)
+            {
                 mMediaCodec.releaseOutputBuffer(mIndex, false);
                 mBuffer = null;
             }
-
-        } catch (RuntimeException e) {
-            e.printStackTrace();
+        }
+        catch (RuntimeException e)
+        {
+            Log.e(TAG, "Reading threw", e);
         }
 
         return min;
     }
 
-    public int available() {
+    public int available()
+    {
         if (mBuffer != null)
+        {
             return mBufferInfo.size - mBuffer.position();
-        else
-            return 0;
+        }
+
+        return 0;
     }
 
-    public BufferInfo getLastBufferInfo() {
+    public BufferInfo getLastBufferInfo()
+    {
         return mBufferInfo;
     }
-
 }

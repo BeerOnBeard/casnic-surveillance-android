@@ -30,12 +30,12 @@ import com.assortedsolutions.streaming.rtcp.SenderReport;
  * Each packetizer inherits from this one and therefore uses RTP and UDP.
  *
  */
-abstract public class AbstractPacketizer {
-
+abstract public class AbstractPacketizer
+{
     protected static final int rtphl = RtpSocket.RTP_HEADER_LENGTH;
 
     // Maximum size of RTP packets
-    protected final static int MAXPACKETSIZE = RtpSocket.MTU-28;
+    protected final static int MAXPACKETSIZE = RtpSocket.MTU - 28;
 
     protected RtpSocket socket = null;
     protected InputStream is = null;
@@ -43,7 +43,8 @@ abstract public class AbstractPacketizer {
 
     protected long ts = 0;
 
-    public AbstractPacketizer() {
+    public AbstractPacketizer()
+    {
         int ssrc = new Random().nextInt();
         ts = new Random().nextInt();
         socket = new RtpSocket();
@@ -66,7 +67,8 @@ abstract public class AbstractPacketizer {
         this.is = is;
     }
 
-    public void setTimeToLive(int ttl) throws IOException {
+    public void setTimeToLive(int ttl) throws IOException
+    {
         socket.setTimeToLive(ttl);
     }
 
@@ -76,7 +78,8 @@ abstract public class AbstractPacketizer {
      * @param rtpPort Destination port that will be used for RTP
      * @param rtcpPort Destination port that will be used for RTCP
      */
-    public void setDestination(InetAddress dest, int rtpPort, int rtcpPort) {
+    public void setDestination(InetAddress dest, int rtpPort, int rtcpPort)
+    {
         socket.setDestination(dest, rtpPort, rtcpPort);
     }
 
@@ -87,20 +90,26 @@ abstract public class AbstractPacketizer {
     public abstract void stop();
 
     /** Updates data for RTCP SR and sends the packet. */
-    protected void send(int length) throws IOException {
+    protected void send(int length) throws IOException
+    {
         socket.commitBuffer(length);
     }
 
     /** For debugging purposes. */
-    protected static String printBuffer(byte[] buffer, int start,int end) {
+    protected static String printBuffer(byte[] buffer, int start, int end)
+    {
         String str = "";
-        for (int i=start;i<end;i++) str+=","+Integer.toHexString(buffer[i]&0xFF);
+        for (int i = start; i < end; i++)
+        {
+            str += "," + Integer.toHexString(buffer[i] & 0xFF);
+        }
+
         return str;
     }
 
     /** Used in packetizers to estimate timestamps in RTP packets. */
-    protected static class Statistics {
-
+    protected static class Statistics
+    {
         public final static String TAG = "Statistics";
 
         private int count=700, c = 0;
@@ -113,50 +122,65 @@ abstract public class AbstractPacketizer {
 
         public Statistics() {}
 
-        public Statistics(int count, int period) {
+        public Statistics(int count, int period)
+        {
             this.count = count;
             this.period = period;
         }
 
-        public void reset() {
+        public void reset()
+        {
             initoffset = false;
-            q = 0; m = 0; c = 0;
+            q = 0;
+            m = 0;
+            c = 0;
             elapsed = 0;
             start = 0;
             duration = 0;
         }
 
-        public void push(long value) {
+        public void push(long value)
+        {
             elapsed += value;
-            if (elapsed>period) {
+            if (elapsed > period)
+            {
                 elapsed = 0;
                 long now = System.nanoTime();
-                if (!initoffset || (now - start < 0)) {
+                if (!initoffset || (now - start < 0))
+                {
                     start = now;
                     duration = 0;
                     initoffset = true;
                 }
+
                 // Prevents drifting issues by comparing the real duration of the
                 // stream with the sum of all temporal lengths of RTP packets.
                 value += (now - start) - duration;
+
                 //Log.d(TAG, "sum1: "+duration/1000000+" sum2: "+(now-start)/1000000+" drift: "+((now-start)-duration)/1000000+" v: "+value/1000000);
             }
-            if (c<5) {
+
+            if (c < 5)
+            {
                 // We ignore the first 20 measured values because they may not be accurate
                 c++;
                 m = value;
-            } else {
-                m = (m*q+value)/(q+1);
-                if (q<count) q++;
+            }
+            else
+            {
+                m = (m * q + value) / (q + 1);
+                if (q < count)
+                {
+                    q++;
+                }
             }
         }
 
-        public long average() {
+        public long average()
+        {
             long l = (long)m;
             duration += l;
             return l;
         }
-
     }
-
 }

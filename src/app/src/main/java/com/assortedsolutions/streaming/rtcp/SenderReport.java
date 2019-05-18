@@ -32,8 +32,9 @@ import android.util.Log;
 /**
  * Implementation of Sender Report RTCP packets.
  */
-public class SenderReport {
-
+public class SenderReport
+{
+    private final static String TAG = "SenderReport";
     public static final int MTU = 1500;
 
     private static final int PACKET_LENGTH = 28;
@@ -49,15 +50,16 @@ public class SenderReport {
     private long interval, delta, now, oldnow;
     private byte mTcpHeader[];
 
-    public SenderReport(int ssrc) throws IOException {
+    public SenderReport(int ssrc) throws IOException
+    {
         super();
         this.mSSRC = ssrc;
     }
 
-    public SenderReport() {
-
+    public SenderReport()
+    {
         mTransport = TRANSPORT_UDP;
-        mTcpHeader = new byte[] {'$',0,0,PACKET_LENGTH};
+        mTcpHeader = new byte[] {'$', 0, 0, PACKET_LENGTH};
 
         /*							     Version(2)  Padding(0)					 					*/
         /*									 ^		  ^			PT = 0	    						*/
@@ -72,7 +74,7 @@ public class SenderReport {
         mBuffer[1] = (byte) 200;
 
         /* Byte 2,3          ->  Length		                     */
-        setLong(PACKET_LENGTH/4-1, 2, 4);
+        setLong(PACKET_LENGTH / 4 - 1, 2, 4);
 
         /* Byte 4,5,6,7      ->  SSRC                            */
         /* Byte 8,9,10,11    ->  NTP timestamp hb				 */
@@ -81,17 +83,20 @@ public class SenderReport {
         /* Byte 20,21,22,23  ->  packet count				 	 */
         /* Byte 24,25,26,27  ->  octet count			         */
 
-        try {
+        try
+        {
             usock = new MulticastSocket();
-        } catch (IOException e) {
-            // Very unlikely to happen. Means that all UDP ports are already being used
-            throw new RuntimeException(e.getMessage());
         }
+        catch (IOException e)
+        {
+            // Very unlikely to happen. Means that all UDP ports are already being used
+            throw new RuntimeException(e.getMessage(), e);
+        }
+
         upack = new DatagramPacket(mBuffer, 1);
 
         // By default we sent one report every 3 secconde
         interval = 3000;
-
     }
 
     public void close() {
@@ -115,7 +120,8 @@ public class SenderReport {
      *            The RTP timestamp.
      * @throws IOException
      **/
-    public void update(int length, long rtpts) throws IOException {
+    public void update(int length, long rtpts) throws IOException
+    {
         mPacketCount += 1;
         mOctetCount += length;
         setLong(mPacketCount, 20, 24);
@@ -124,15 +130,16 @@ public class SenderReport {
         now = SystemClock.elapsedRealtime();
         delta += oldnow != 0 ? now-oldnow : 0;
         oldnow = now;
-        if (interval>0 && delta>=interval) {
+        if (interval > 0 && delta >= interval)
+        {
             // We send a Sender Report
             send(System.nanoTime(), rtpts);
             delta = 0;
         }
-
     }
 
-    public void setSSRC(int ssrc) {
+    public void setSSRC(int ssrc)
+    {
         this.mSSRC = ssrc;
         setLong(ssrc,4,8);
         mPacketCount = 0;
@@ -141,7 +148,8 @@ public class SenderReport {
         setLong(mOctetCount, 24, 28);
     }
 
-    public void setDestination(InetAddress dest, int dport) {
+    public void setDestination(InetAddress dest, int dport)
+    {
         mTransport = TRANSPORT_UDP;
         mPort = dport;
         upack.setPort(dport);
@@ -153,7 +161,8 @@ public class SenderReport {
      * the output stream to which RTP packets will be written to must
      * be specified with this method.
      */
-    public void setOutputStream(OutputStream os, byte channelIdentifier) {
+    public void setOutputStream(OutputStream os, byte channelIdentifier)
+    {
         mTransport = TRANSPORT_TCP;
         mOutputStream = os;
         mTcpHeader[1] = channelIdentifier;
@@ -174,7 +183,8 @@ public class SenderReport {
     /**
      * Resets the reports (total number of bytes sent, number of packets sent, etc.)
      */
-    public void reset() {
+    public void reset()
+    {
         mPacketCount = 0;
         mOctetCount = 0;
         setLong(mPacketCount, 20, 24);
@@ -182,8 +192,10 @@ public class SenderReport {
         delta = now = oldnow = 0;
     }
 
-    private void setLong(long n, int begin, int end) {
-        for (end--; end >= begin; end--) {
+    private void setLong(long n, int begin, int end)
+    {
+        for (end--; end >= begin; end--)
+        {
             mBuffer[end] = (byte) (n % 256);
             n >>= 8;
         }
@@ -197,24 +209,32 @@ public class SenderReport {
      * @param rtpts
      *            the RTP timestamp.
      */
-    private void send(long ntpts, long rtpts) throws IOException {
-        long hb = ntpts/1000000000;
-        long lb = ( ( ntpts - hb*1000000000 ) * 4294967296L )/1000000000;
+    private void send(long ntpts, long rtpts) throws IOException
+    {
+        long hb = ntpts / 1000000000;
+        long lb = ( ( ntpts - hb * 1000000000 ) * 4294967296L ) / 1000000000;
         setLong(hb, 8, 12);
         setLong(lb, 12, 16);
         setLong(rtpts, 16, 20);
-        if (mTransport == TRANSPORT_UDP) {
+        if (mTransport == TRANSPORT_UDP)
+        {
             upack.setLength(PACKET_LENGTH);
             usock.send(upack);
-        } else {
-            synchronized (mOutputStream) {
-                try {
+        }
+        else
+        {
+            synchronized (mOutputStream)
+            {
+                try
+                {
                     mOutputStream.write(mTcpHeader);
                     mOutputStream.write(mBuffer, 0, PACKET_LENGTH);
-                } catch (Exception e) {}
+                }
+                catch (Exception e)
+                {
+                    Log.e(TAG, "Writing to output stream threw", e);
+                }
             }
         }
     }
-
-
 }

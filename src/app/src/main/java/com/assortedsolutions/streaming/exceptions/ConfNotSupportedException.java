@@ -18,8 +18,8 @@
 
 package com.assortedsolutions.streaming.exceptions;
 
-public class ConfNotSupportedException extends RuntimeException {
-
+public class ConfNotSupportedException extends RuntimeException
+{
     public ConfNotSupportedException(String message) {
         super(message);
     }

@@ -25,8 +25,8 @@ import android.util.Log;
 /**
  * Converts from NV21 to YUV420 semi planar or planar.
  */
-public class NV21Convertor {
-
+public class NV21Convertor
+{
     private int mSliceHeight, mHeight;
     private int mStride, mWidth;
     private int mSize;
@@ -35,7 +35,8 @@ public class NV21Convertor {
     private byte[] mBuffer;
     ByteBuffer mCopy;
 
-    public void setSize(int width, int height) {
+    public void setSize(int width, int height)
+    {
         mHeight = height;
         mWidth = width;
         mSliceHeight = height;
@@ -59,12 +60,12 @@ public class NV21Convertor {
         mYPadding = padding;
     }
 
-    public int getBufferSize() {
-        return 3*mSize/2;
-    }
+    public int getBufferSize() { return 3 * mSize / 2; }
 
-    public void setEncoderColorFormat(int colorFormat) {
-        switch (colorFormat) {
+    public void setEncoderColorFormat(int colorFormat)
+    {
+        switch (colorFormat)
+        {
             case MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar:
             case MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedSemiPlanar:
             case MediaCodecInfo.CodecCapabilities.COLOR_TI_FormatYUV420PackedSemiPlanar:
@@ -93,7 +94,6 @@ public class NV21Convertor {
         return mYPadding;
     }
 
-
     public boolean getPlanar() {
         return mPlanar;
     }
@@ -102,62 +102,83 @@ public class NV21Convertor {
         return mPanesReversed;
     }
 
-    public void convert(byte[] data, ByteBuffer buffer) {
+    public void convert(byte[] data, ByteBuffer buffer)
+    {
         byte[] result = convert(data);
-        int min = buffer.capacity() < data.length?buffer.capacity() : data.length;
+        int min = buffer.capacity() < data.length ? buffer.capacity() : data.length;
         buffer.put(result, 0, min);
     }
 
-    public byte[] convert(byte[] data) {
-
+    public byte[] convert(byte[] data)
+    {
         // A buffer large enough for every case
-        if (mBuffer==null || mBuffer.length != 3*mSliceHeight*mStride/2+mYPadding) {
-            mBuffer = new byte[3*mSliceHeight*mStride/2+mYPadding];
+        if (mBuffer == null || mBuffer.length != 3 * mSliceHeight * mStride / 2 + mYPadding)
+        {
+            mBuffer = new byte[3 * mSliceHeight * mStride / 2 + mYPadding];
         }
 
-        if (!mPlanar) {
-            if (mSliceHeight==mHeight && mStride==mWidth) {
+        if (!mPlanar)
+        {
+            if (mSliceHeight == mHeight && mStride == mWidth)
+            {
                 // Swaps U and V
-                if (!mPanesReversed) {
-                    for (int i = mSize; i < mSize+mSize/2; i += 2) {
-                        mBuffer[0] = data[i+1];
-                        data[i+1] = data[i];
+                if (!mPanesReversed)
+                {
+                    for (int i = mSize; i < mSize + mSize / 2; i += 2)
+                    {
+                        mBuffer[0] = data[i + 1];
+                        data[i + 1] = data[i];
                         data[i] = mBuffer[0];
                     }
                 }
-                if (mYPadding>0) {
+
+                if (mYPadding > 0)
+                {
                     System.arraycopy(data, 0, mBuffer, 0, mSize);
-                    System.arraycopy(data, mSize, mBuffer, mSize+mYPadding, mSize/2);
+                    System.arraycopy(data, mSize, mBuffer, mSize + mYPadding, mSize / 2);
                     return mBuffer;
                 }
+
                 return data;
             }
-        } else {
-            if (mSliceHeight==mHeight && mStride==mWidth) {
+        }
+        else
+        {
+            if (mSliceHeight == mHeight && mStride == mWidth)
+            {
                 // De-interleave U and V
-                if (!mPanesReversed) {
-                    for (int i = 0; i < mSize/4; i+=1) {
-                        mBuffer[i] = data[mSize+2*i+1];
-                        mBuffer[mSize/4+i] = data[mSize+2*i];
-                    }
-                } else {
-                    for (int i = 0; i < mSize/4; i+=1) {
-                        mBuffer[i] = data[mSize+2*i];
-                        mBuffer[mSize/4+i] = data[mSize+2*i+1];
+                if (!mPanesReversed)
+                {
+                    for (int i = 0; i < mSize / 4; i += 1)
+                    {
+                        mBuffer[i] = data[mSize + 2 * i + 1];
+                        mBuffer[mSize / 4 + i] = data[mSize + 2 * i];
                     }
                 }
-                if (mYPadding == 0) {
+                else
+                {
+                    for (int i = 0; i < mSize / 4; i += 1)
+                    {
+                        mBuffer[i] = data[mSize + 2 * i];
+                        mBuffer[mSize / 4 + i] = data[mSize + 2 * i + 1];
+                    }
+                }
+
+                if (mYPadding == 0)
+                {
                     System.arraycopy(mBuffer, 0, data, mSize, mSize/2);
-                } else {
+                }
+                else
+                {
                     System.arraycopy(data, 0, mBuffer, 0, mSize);
-                    System.arraycopy(mBuffer, 0, mBuffer, mSize+mYPadding, mSize/2);
+                    System.arraycopy(mBuffer, 0, mBuffer, mSize + mYPadding, mSize / 2);
                     return mBuffer;
                 }
+
                 return data;
             }
         }
 
         return data;
     }
-
 }
