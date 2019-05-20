@@ -20,7 +20,8 @@ package com.assortedsolutions.streaming.exceptions;
 
 public class ConfNotSupportedException extends RuntimeException
 {
-    public ConfNotSupportedException(String message, Throwable throwable) {
+    public ConfNotSupportedException(String message, Throwable throwable)
+    {
         super(message, throwable);
     }
 

@@ -21,7 +21,6 @@ package com.assortedsolutions.streaming.rtp;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import android.annotation.SuppressLint;
 import android.media.MediaCodec;
 import android.media.MediaCodec.BufferInfo;
 import android.media.MediaFormat;
@@ -57,7 +56,7 @@ public class MediaCodecInputStream extends InputStream
     }
 
     @Override
-    public int read() throws IOException { return 0; }
+    public int read() { return 0; }
 
     @Override
     public int read(byte[] buffer, int offset, int length) throws IOException
@@ -71,9 +70,9 @@ public class MediaCodecInputStream extends InputStream
                 while (!Thread.interrupted() && !mClosed)
                 {
                     mIndex = mMediaCodec.dequeueOutputBuffer(mBufferInfo, 500000);
+
                     if (mIndex >= 0)
                     {
-                        //Log.d(TAG,"Index: "+mIndex+" Time: "+mBufferInfo.presentationTimeUs+" size: "+mBufferInfo.size);
                         mBuffer = mBuffers[mIndex];
                         mBuffer.position(0);
                         break;
@@ -90,12 +89,10 @@ public class MediaCodecInputStream extends InputStream
                     else if (mIndex == MediaCodec.INFO_TRY_AGAIN_LATER)
                     {
                         Log.v(TAG,"No buffer available...");
-                        //return 0;
                     }
                     else
                     {
                         Log.e(TAG,"Message: " + mIndex);
-                        //return 0;
                     }
                 }
             }

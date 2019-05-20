@@ -35,9 +35,6 @@ public abstract class MediaStream implements Stream
 {
     protected static final String TAG = "MediaStream";
 
-    /** Raw audio/video will be encoded using the MediaCodec API with buffers. */
-    public static final byte MODE_MEDIACODEC_API = 0x02;
-
     /** Prefix that will be used for all shared preferences saved by libstreaming */
     protected static final String PREF_PREFIX = "libstreaming-";
 
@@ -124,7 +121,6 @@ public abstract class MediaStream implements Stream
         mOutputStream = stream;
         mChannelIdentifier = channelIdentifier;
     }
-
 
     /**
      * Sets the Time To Live of packets sent over the network.

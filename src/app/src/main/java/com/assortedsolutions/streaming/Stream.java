@@ -108,7 +108,7 @@ public interface Stream
     /**
      * Returns a description of the stream using SDP.
      * This method can only be called after {@link Stream#configure()}.
-     * @throws IllegalStateException Thrown when {@link Stream#configure()} wa not called.
+     * @throws IllegalStateException Thrown when {@link Stream#configure()} was not called.
      */
     String getSessionDescription() throws IllegalStateException;
 

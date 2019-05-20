@@ -73,16 +73,6 @@ public abstract class VideoStream extends MediaStream
     protected int mCameraImageFormat;
 
     /**
-     * Don't use this class directly.
-     * Uses CAMERA_FACING_BACK by default.
-     */
-    public VideoStream()
-    {
-        this(CameraInfo.CAMERA_FACING_BACK);
-        Log.e(TAG, "Used default constructor");
-    }
-
-    /**
      * Don't use this class directly
      * @param camera Can be either CameraInfo.CAMERA_FACING_BACK or CameraInfo.CAMERA_FACING_FRONT
      */
@@ -175,7 +165,7 @@ public abstract class VideoStream extends MediaStream
                 {
                     mSurfaceReady = false;
                     stopPreview();
-                    Log.d(TAG,"Surface destroyed!");
+                    Log.d(TAG,"Surface destroyed");
                 }
 
                 @Override
@@ -188,7 +178,7 @@ public abstract class VideoStream extends MediaStream
                 @Override
                 public void surfaceChanged(SurfaceHolder holder, int format, int width, int height)
                 {
-                    Log.d(TAG,"Surface Changed!");
+                    Log.d(TAG,"Surface Changed");
                 }
             };
 
@@ -218,7 +208,7 @@ public abstract class VideoStream extends MediaStream
         if (parameters.getFlashMode() == null)
         {
             // The phone has no flash or the chosen camera can not toggle the flash
-            throw new RuntimeException("Can't turn the flash on !");
+            throw new RuntimeException("Cannot turn the flash on");
         }
         else
         {
@@ -232,7 +222,7 @@ public abstract class VideoStream extends MediaStream
             catch (RuntimeException e)
             {
                 mFlashEnabled = false;
-                throw new RuntimeException("Can't turn the flash on!", e);
+                throw new RuntimeException("Cannot turn the flash on", e);
             }
             finally
             {
@@ -536,14 +526,15 @@ public abstract class VideoStream extends MediaStream
                 if (error == Camera.CAMERA_ERROR_SERVER_DIED)
                 {
                     // In this case the application must release the camera and instantiate a new one
-                    Log.e(TAG,"Media server died !");
+                    Log.e(TAG,"Media server died");
+
                     // We don't know in what thread we are so stop needs to be synchronized
                     mCameraOpenedManually = false;
                     stop();
                 }
                 else
                 {
-                    Log.e(TAG,"Error unknown with the camera: " + error);
+                    Log.e(TAG,"Unknown error with the camera: " + error);
                 }
                 }
             });
@@ -598,7 +589,7 @@ public abstract class VideoStream extends MediaStream
             }
             catch (Exception e)
             {
-                Log.e(TAG,e.getMessage()!=null?e.getMessage():"unknown error");
+                Log.e(TAG, "Releasing the camera threw", e);
             }
 
             mCamera = null;
@@ -656,13 +647,14 @@ public abstract class VideoStream extends MediaStream
         }
 
         Log.d(TAG,"Locking camera");
+
         try
         {
             mCamera.reconnect();
         }
         catch (Exception e)
         {
-            Log.e(TAG, e.getMessage(), e);
+            Log.e(TAG, "Reconnecting to camera threw", e);
         }
 
         mUnlocked = false;
@@ -676,13 +668,14 @@ public abstract class VideoStream extends MediaStream
         }
 
         Log.d(TAG,"Unlocking camera");
+
         try
         {
             mCamera.unlock();
         }
         catch (Exception e)
         {
-            Log.e(TAG, e.getMessage(), e);
+            Log.e(TAG, "Unlocking camera threw", e);
         }
 
         mUnlocked = true;
@@ -699,8 +692,11 @@ public abstract class VideoStream extends MediaStream
 
         final Camera.PreviewCallback callback = new Camera.PreviewCallback()
         {
-            int i = 0, t = 0;
-            long now, oldnow, count = 0;
+            int i = 0;
+            int t = 0;
+            long now;
+            long oldNow;
+            long count = 0;
 
             @Override
             public void onPreviewFrame(byte[] data, Camera camera)
@@ -709,7 +705,7 @@ public abstract class VideoStream extends MediaStream
                 now = System.nanoTime() / 1000;
                 if (i > 3)
                 {
-                    t += now - oldnow;
+                    t += now - oldNow;
                     count++;
                 }
 
@@ -719,7 +715,7 @@ public abstract class VideoStream extends MediaStream
                     lock.release();
                 }
 
-                oldnow = now;
+                oldNow = now;
             }
         };
 

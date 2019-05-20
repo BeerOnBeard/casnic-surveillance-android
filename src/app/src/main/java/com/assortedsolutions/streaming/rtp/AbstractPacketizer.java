@@ -53,10 +53,6 @@ abstract public class AbstractPacketizer
         return socket;
     }
 
-    public void setSSRC(int ssrc) {
-        socket.setSSRC(ssrc);
-    }
-
     public int getSSRC() {
         return socket.getSSRC();
     }
@@ -93,18 +89,6 @@ abstract public class AbstractPacketizer
         socket.commitBuffer(length);
     }
 
-    /** For debugging purposes. */
-    protected static String printBuffer(byte[] buffer, int start, int end)
-    {
-        String str = "";
-        for (int i = start; i < end; i++)
-        {
-            str += "," + Integer.toHexString(buffer[i] & 0xFF);
-        }
-
-        return str;
-    }
-
     /** Used in packetizers to estimate timestamps in RTP packets. */
     protected static class Statistics
     {
@@ -119,12 +103,6 @@ abstract public class AbstractPacketizer
         private boolean initoffset = false;
 
         public Statistics() {}
-
-        public Statistics(int count, int period)
-        {
-            this.count = count;
-            this.period = period;
-        }
 
         public void reset()
         {
@@ -154,8 +132,6 @@ abstract public class AbstractPacketizer
                 // Prevents drifting issues by comparing the real duration of the
                 // stream with the sum of all temporal lengths of RTP packets.
                 value += (now - start) - duration;
-
-                //Log.d(TAG, "sum1: "+duration/1000000+" sum2: "+(now-start)/1000000+" drift: "+((now-start)-duration)/1000000+" v: "+value/1000000);
             }
 
             if (c < 5)

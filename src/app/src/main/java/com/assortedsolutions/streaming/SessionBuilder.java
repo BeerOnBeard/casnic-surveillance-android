@@ -240,70 +240,16 @@ public class SessionBuilder
         return this;
     }
 
-    /** Returns the context set with {@link #setContext(Context)}*/
-    public Context getContext()
-    {
-        return mContext;
-    }
-
-    /** Returns the destination ip address set with {@link #setDestination(String)}. */
-    public String getDestination()
-    {
-        return mDestination;
-    }
-
-    /** Returns the origin ip address set with {@link #setOrigin(String)}. */
-    public String getOrigin()
-    {
-        return mOrigin;
-    }
-
     /** Returns the audio encoder set with {@link #setAudioEncoder(int)}. */
     public int getAudioEncoder()
     {
         return mAudioEncoder;
     }
 
-    /** Returns the id of the {@link android.hardware.Camera} set with {@link #setCamera(int)}. */
-    public int getCamera()
-    {
-        return mCamera;
-    }
-
     /** Returns the video encoder set with {@link #setVideoEncoder(int)}. */
     public int getVideoEncoder()
     {
         return mVideoEncoder;
-    }
-
-    /** Returns the VideoQuality set with {@link #setVideoQuality(VideoQuality)}. */
-    public VideoQuality getVideoQuality()
-    {
-        return mVideoQuality;
-    }
-
-    /** Returns the AudioQuality set with {@link #setAudioQuality(AudioQuality)}. */
-    public AudioQuality getAudioQuality()
-    {
-        return mAudioQuality;
-    }
-
-    /** Returns the flash state set with {@link #setFlashEnabled(boolean)}. */
-    public boolean getFlashState()
-    {
-        return mFlash;
-    }
-
-    /** Returns the SurfaceView set with {@link #setSurfaceView(SurfaceView)}. */
-    public SurfaceView getSurfaceView()
-    {
-        return mSurfaceView;
-    }
-
-    /** Returns the time to live set with {@link #setTimeToLive(int)}. */
-    public int getTimeToLive()
-    {
-        return mTimeToLive;
     }
 
     /** Returns a new {@link SessionBuilder} with the same configuration. */

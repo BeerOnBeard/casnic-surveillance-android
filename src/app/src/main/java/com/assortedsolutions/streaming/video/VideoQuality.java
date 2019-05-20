@@ -35,20 +35,6 @@ public class VideoQuality
     /** Default video stream quality. */
     public final static VideoQuality DEFAULT_VIDEO_QUALITY = new VideoQuality(320, 240, 20, 500000);
 
-    /**	Represents a quality for a video stream. */
-    public VideoQuality() {}
-
-    /**
-     * Represents a quality for a video stream.
-     * @param resX The horizontal resolution
-     * @param resY The vertical resolution
-     */
-    public VideoQuality(int resX, int resY)
-    {
-        this.resX = resX;
-        this.resY = resY;
-    }
-
     /**
      * Represents a quality for a video stream.
      * @param resX The horizontal resolution

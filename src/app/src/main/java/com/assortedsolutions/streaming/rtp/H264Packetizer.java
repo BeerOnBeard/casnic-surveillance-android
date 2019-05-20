@@ -19,7 +19,6 @@
 package com.assortedsolutions.streaming.rtp;
 
 import java.io.IOException;
-import android.annotation.SuppressLint;
 import android.util.Log;
 
 /**
@@ -38,9 +37,12 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable
 
     private Thread t = null;
     private int naluLength = 0;
-    private long delay = 0, oldtime = 0;
+    private long delay = 0;
+    private long oldtime = 0;
     private Statistics stats = new Statistics();
-    private byte[] sps = null, pps = null, stapa = null;
+    private byte[] sps = null;
+    private byte[] pps = null;
+    private byte[] stapa = null;
     byte[] header = new byte[5];
     private int count = 0;
     private int streamType = 1;
@@ -150,9 +152,6 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable
 
                 // Computes the average duration of a NAL unit
                 delay = stats.average();
-
-                //Log.d(TAG,"duration: "+duration/1000000+" delay: "+delay/1000000);
-
             }
         }
         catch (IOException e)
@@ -240,8 +239,6 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable
             super.send(rtphl+stapa.length);
         }
 
-        //Log.d(TAG,"- Nal unit length: " + naluLength + " delay: "+delay/1000000+" type: "+type);
-
         // Small NAL unit => Single NAL unit
         if (naluLength <= MAXPACKETSIZE-rtphl - 2)
         {
@@ -251,7 +248,6 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable
             socket.updateTimestamp(ts);
             socket.markNextPacket();
             super.send(naluLength + rtphl);
-            //Log.d(TAG,"----- Single NAL unit - len:"+len+" delay: "+delay);
         }
         // Large NAL unit => Split nal unit
         else
@@ -289,8 +285,6 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable
 
                 // Switch start bit
                 header[1] = (byte) (header[1] & 0x7F);
-
-                //Log.d(TAG,"----- FU-A unit, sum:"+sum);
             }
         }
     }
@@ -316,7 +310,7 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable
     {
         int type;
 
-        Log.e(TAG,"Packetizer out of sync ! Let's try to fix that...(NAL length: " + naluLength + ")");
+        Log.e(TAG,"Packetizer out of sync. Let's try to fix that... NAL length: " + naluLength);
 
         while (true)
         {

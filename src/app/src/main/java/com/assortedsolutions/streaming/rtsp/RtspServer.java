@@ -218,21 +218,6 @@ public class RtspServer extends Service
         return false;
     }
 
-    /** Returns the bandwidth consumed by the RTSP server in bits per second. */
-    public long getBitrate()
-    {
-        long bitrate = 0;
-        for (Session session : mSessions.keySet())
-        {
-            if (session != null && session.isStreaming())
-            {
-                bitrate += session.getBitrate();
-            }
-        }
-
-        return bitrate;
-    }
-
     /**
      * Starts (or restart if needed, if for example the configuration
      * of the server has been modified) the RTSP server.
@@ -372,7 +357,7 @@ public class RtspServer extends Service
                 }
             }
 
-            Log.i(TAG,"RTSP server stopped!");
+            Log.i(TAG,"RTSP server stopped");
         }
 
         public void kill()
@@ -709,7 +694,7 @@ public class RtspServer extends Service
         public HashMap<String,String> headers = new HashMap<>();
 
         /** Parse the method, uri & headers of a RTSP request */
-        public static Request parseRequest(BufferedReader input) throws IOException, IllegalStateException, SocketException
+        public static Request parseRequest(BufferedReader input) throws IOException, IllegalStateException
         {
             Request request = new Request();
             String line;

@@ -55,17 +55,23 @@ public class RtpSocket implements Runnable
 
     private SenderReport mReport;
 
-    private Semaphore mBufferRequested, mBufferCommitted;
+    private Semaphore mBufferRequested;
+    private Semaphore mBufferCommitted;
     private Thread mThread;
 
     private int mTransport;
     private long mCacheSize;
     private long mClock = 0;
     private long mOldTimestamp = 0;
-    private int mSsrc, mSeq = 0, mPort = -1;
-    private int mBufferCount, mBufferIn, mBufferOut;
+    private int mSsrc;
+    private int mSeq = 0;
+    private int mPort = -1;
+    private int mBufferCount;
+    private int mBufferIn;
+    private int mBufferOut;
     private int mCount = 0;
     private byte mTcpHeader[];
+
     protected OutputStream mOutputStream = null;
 
     private AverageBitrate mAverageBitrate;
@@ -202,10 +208,6 @@ public class RtpSocket implements Runnable
         }
     }
 
-    public int getPort() {
-        return mPort;
-    }
-
     public int[] getLocalPorts()
     {
         return new int[]
@@ -228,7 +230,7 @@ public class RtpSocket implements Runnable
     }
 
     /** Puts the buffer back into the FIFO without sending the packet. */
-    public void commitBuffer() throws IOException
+    public void commitBuffer()
     {
         if (mThread == null)
         {
@@ -245,7 +247,7 @@ public class RtpSocket implements Runnable
     }
 
     /** Sends the RTP packet over the network. */
-    public void commitBuffer(int length) throws IOException
+    public void commitBuffer(int length)
     {
         updateSequence();
         mPackets[mBufferIn].setLength(length);
@@ -315,7 +317,6 @@ public class RtpSocket implements Runnable
                         stats.push(mTimestamps[mBufferOut] - mOldTimestamp);
                         long d = stats.average() / 1000000;
 
-                        //Log.d(TAG,"delay: "+d+" d: "+(mTimestamps[mBufferOut]-mOldTimestamp)/1000000);
                         // We ensure that packets are sent at a constant and suitable rate no matter how the RtpSocket is used.
                         if (mCacheSize > 0)
                         {
@@ -330,7 +331,6 @@ public class RtpSocket implements Runnable
                     delta += mTimestamps[mBufferOut] - mOldTimestamp;
                     if (delta > 500000000 || delta < 0)
                     {
-                        //Log.d(TAG,"permits: "+mBufferCommitted.availablePermits());
                         delta = 0;
                     }
                 }
@@ -371,7 +371,9 @@ public class RtpSocket implements Runnable
         synchronized (mOutputStream)
         {
             int len = mPackets[mBufferOut].getLength();
-            Log.d(TAG,"sent " + len);
+
+            Log.d(TAG, "sent " + len);
+
             mTcpHeader[2] = (byte) (len >> 8);
             mTcpHeader[3] = (byte) (len & 0xFF);
             try
@@ -413,12 +415,6 @@ public class RtpSocket implements Runnable
             reset();
         }
 
-        public AverageBitrate(int delay)
-        {
-            mSize = delay / ((int)RESOLUTION);
-            reset();
-        }
-
         public void reset()
         {
             mSum = new long[mSize];
@@ -434,10 +430,12 @@ public class RtpSocket implements Runnable
         public void push(int length)
         {
             mNow = SystemClock.elapsedRealtime();
+
             if (mCount > 0)
             {
                 mDelta += mNow - mOldNow;
                 mTotal += length;
+
                 if (mDelta > RESOLUTION)
                 {
                     mSum[mIndex] = mTotal;
@@ -445,6 +443,7 @@ public class RtpSocket implements Runnable
                     mElapsed[mIndex] = mDelta;
                     mDelta = 0;
                     mIndex++;
+
                     if (mIndex >= mSize)
                     {
                         mIndex = 0;
@@ -465,7 +464,6 @@ public class RtpSocket implements Runnable
                 delta += mElapsed[i];
             }
 
-            //Log.d(TAG, "Time elapsed: "+delta);
             return (int) (delta > 0 ? 8000 * sum / delta : 0);
         }
     }
@@ -475,8 +473,10 @@ public class RtpSocket implements Runnable
     {
         public final static String TAG = "Statistics";
 
-        private int count = 500, c = 0;
-        private float m = 0, q = 0;
+        private int count = 500;
+        private int c = 0;
+        private float m = 0;
+        private float q = 0;
         private long elapsed = 0;
         private long start = 0;
         private long duration = 0;
@@ -505,7 +505,6 @@ public class RtpSocket implements Runnable
                 }
 
                 value -= (now - start) - duration;
-                //Log.d(TAG, "sum1: "+duration/1000000+" sum2: "+(now-start)/1000000+" drift: "+((now-start)-duration)/1000000+" v: "+value/1000000);
             }
 
             if (c < 40)

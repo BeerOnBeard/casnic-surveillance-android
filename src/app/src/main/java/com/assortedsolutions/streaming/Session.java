@@ -21,7 +21,6 @@ package com.assortedsolutions.streaming;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.concurrent.CountDownLatch;
 import com.assortedsolutions.streaming.audio.AudioQuality;
 import com.assortedsolutions.streaming.audio.AudioStream;
 import com.assortedsolutions.streaming.exceptions.CameraInUseException;
@@ -64,7 +63,6 @@ public class Session
 {
     public final static String TAG = "Session";
     public final static int STREAM_VIDEO = 0x01;
-    public final static int STREAM_AUDIO = 0x00;
 
     /** Some app is already using a camera (Camera.open() has failed). */
     public final static int ERROR_CAMERA_ALREADY_IN_USE = 0x00;
@@ -258,82 +256,8 @@ public class Session
     }
 
     /**
-     * Sets the configuration of the stream. <br />
-     * You can call this method at any time and changes will take
-     * effect next time you call {@link #configure()}.
-     * @param quality Quality of the stream
-     */
-    public void setVideoQuality(VideoQuality quality)
-    {
-        if (mVideoStream == null)
-        {
-            return;
-        }
-
-        mVideoStream.setVideoQuality(quality);
-    }
-
-    /**
-     * Sets a Surface to show a preview of recorded media (video). <br />
-     * You can call this method at any time and changes will take
-     * effect next time you call {@link #start()} or {@link #startPreview()}.
-     */
-    public void setSurfaceView(final SurfaceView view)
-    {
-        mHandler.post(new Runnable()
-        {
-            @Override
-            public void run()
-            {
-                if (mVideoStream != null)
-                {
-                    mVideoStream.setSurfaceView(view);
-                }
-            }
-        });
-    }
-
-    /**
-     * Sets the orientation of the preview. <br />
-     * You can call this method at any time and changes will take
-     * effect next time you call {@link #configure()}.
-     * @param orientation The orientation of the preview
-     */
-    public void setPreviewOrientation(int orientation)
-    {
-        if (mVideoStream != null)
-        {
-            mVideoStream.setPreviewOrientation(orientation);
-        }
-    }
-
-    /**
-     * Sets the configuration of the stream. <br />
-     * You can call this method at any time and changes will take
-     * effect next time you call {@link #configure()}.
-     * @param quality Quality of the stream
-     */
-    public void setAudioQuality(AudioQuality quality)
-    {
-        if (mAudioStream != null)
-        {
-            mAudioStream.setAudioQuality(quality);
-        }
-    }
-
-    /**
-     * Returns the {@link Callback} interface that was set with
-     * {@link #setCallback(Callback)} or null if none was set.
-     */
-    public Callback getCallback()
-    {
-        return mCallback;
-    }
-
-    /**
      * Returns a Session Description that can be stored in a file or sent to a client with RTSP.
      * @return The Session Description.
-     * @throws IllegalStateException Thrown when {@link #setDestination(String)} has never been called.
      */
     public String getSessionDescription()
     {
@@ -414,13 +338,14 @@ public class Session
             @Override
             public void run()
             {
-                try
-                {
-                    syncConfigure();
-                }
-                catch (Exception e)
-                {
-                }
+            try
+            {
+                syncConfigure();
+            }
+            catch (Exception e)
+            {
+                Log.e(TAG, "Configure threw", e);
+            }
             }
         });
     }
@@ -431,13 +356,7 @@ public class Session
      * {@link Callback#onSessionError(int, int, Exception)} when
      * an error occurs.
      **/
-    public void syncConfigure()
-            throws CameraInUseException,
-            StorageUnavailableException,
-            ConfNotSupportedException,
-            InvalidSurfaceException,
-            RuntimeException,
-            IOException
+    public void syncConfigure() throws RuntimeException, IOException
     {
         for (int id = 0; id < 2; id++)
         {
@@ -493,13 +412,14 @@ public class Session
             @Override
             public void run()
             {
-                try
-                {
-                    syncStart();
-                }
-                catch (Exception e)
-                {
-                }
+            try
+            {
+                syncStart();
+            }
+            catch (Exception e)
+            {
+                Log.e(TAG, "Starting threw", e);
+            }
             }
         });
     }
@@ -509,13 +429,7 @@ public class Session
      * Throws exceptions in addition to calling a callback.
      * @param id The id of the stream to start
      **/
-    public void syncStart(int id)
-            throws CameraInUseException,
-            StorageUnavailableException,
-            ConfNotSupportedException,
-            InvalidSurfaceException,
-            UnknownHostException,
-            IOException
+    public void syncStart(int id) throws CameraInUseException, ConfNotSupportedException, InvalidSurfaceException, IOException
     {
         Stream stream = id == 0 ? mAudioStream : mVideoStream;
         if (stream != null && !stream.isStreaming())
@@ -578,13 +492,7 @@ public class Session
      * Does the same thing as {@link #start()}, but in a synchronous manner. <br />
      * Throws exceptions in addition to calling a callback.
      **/
-    public void syncStart()
-            throws CameraInUseException,
-            StorageUnavailableException,
-            ConfNotSupportedException,
-            InvalidSurfaceException,
-            UnknownHostException,
-            IOException
+    public void syncStart() throws CameraInUseException, ConfNotSupportedException, InvalidSurfaceException, IOException
     {
         syncStart(1);
         try
