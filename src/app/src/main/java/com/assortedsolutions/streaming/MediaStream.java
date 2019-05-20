@@ -43,9 +43,6 @@ public abstract class MediaStream implements Stream
 
     /** The packetizer that will read the output of the camera and send RTP packets over the networked. */
     protected AbstractPacketizer mPacketizer = null;
-
-    protected byte mMode = MODE_MEDIACODEC_API;
-    protected byte mRequestedMode = MODE_MEDIACODEC_API;
     
     protected boolean mStreaming = false;
     protected boolean mConfigured = false;
@@ -157,22 +154,6 @@ public abstract class MediaStream implements Stream
     }
 
     /**
-     * Sets the streaming method that will be used.
-     *
-     * If the mode is set to {@link #MODE_MEDIACODEC_API} or to {@link #MODE_MEDIACODEC_API_2},
-     * audio/video will be encoded with using the MediaCodec. <br />
-     *
-     * The {@link #MODE_MEDIACODEC_API_2} mode only concerns {@link VideoStream}, it makes
-     * use of the createInputSurface() method of the MediaCodec API (Android 4.3 is needed there). <br />
-     *
-     * @param mode Can be {@link #MODE_MEDIACODEC_API} or {@link #MODE_MEDIACODEC_API_2}
-     */
-    public void setStreamingMethod(byte mode)
-    {
-        mRequestedMode = mode;
-    }
-
-    /**
      * Returns the packetizer associated with the {@link MediaStream}.
      * @return The packetizer
      */
@@ -217,7 +198,6 @@ public abstract class MediaStream implements Stream
             mPacketizer.getRtpSocket().setOutputStream(mOutputStream, mChannelIdentifier);
         }
 
-        mMode = mRequestedMode;
         mConfigured = true;
     }
 

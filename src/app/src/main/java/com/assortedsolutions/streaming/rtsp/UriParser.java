@@ -29,7 +29,6 @@ import java.net.URI;
 import java.net.URLEncoder;
 import java.net.UnknownHostException;
 import java.util.Set;
-import com.assortedsolutions.streaming.MediaStream;
 import com.assortedsolutions.streaming.Session;
 import com.assortedsolutions.streaming.SessionBuilder;
 import com.assortedsolutions.streaming.audio.AudioQuality;
@@ -61,8 +60,6 @@ public class UriParser
     public static Session parse(String uri) throws IllegalStateException, IOException
     {
         SessionBuilder builder = SessionBuilder.getInstance().clone();
-        byte audioApi = 0, videoApi = 0;
-
         String query = URI.create(uri).getQuery();
         String[] queryParams = query == null ? new String[0] : query.split("&");
         ContentValues params = new ContentValues();
@@ -161,30 +158,6 @@ public class UriParser
                     }
                 }
 
-                // VIDEOAPI -> can be used to specify what api will be used to encode video. The MediaCodec API is the only supported.
-                else if (paramName.equalsIgnoreCase("videoapi"))
-                {
-                    if (paramValue != null)
-                    {
-                        if (paramValue.equalsIgnoreCase("mc"))
-                        {
-                            videoApi = MediaStream.MODE_MEDIACODEC_API;
-                        }
-                    }
-                }
-
-                // AUDIOAPI -> can be used to specify what api will be used to encode audio. The MediaCodec API is the only supported.
-                else if (paramName.equalsIgnoreCase("audioapi"))
-                {
-                    if (paramValue != null)
-                    {
-                        if (paramValue.equalsIgnoreCase("mc"))
-                        {
-                            audioApi = MediaStream.MODE_MEDIACODEC_API;
-                        }
-                    }
-                }
-
                 // TTL -> the client can modify the time to live of packets
                 // By default ttl=64
                 else if (paramName.equalsIgnoreCase("ttl"))
@@ -228,17 +201,6 @@ public class UriParser
         }
 
         Session session = builder.build();
-
-        if (videoApi > 0 && session.getVideoTrack() != null)
-        {
-            session.getVideoTrack().setStreamingMethod(videoApi);
-        }
-
-        if (audioApi > 0 && session.getAudioTrack() != null)
-        {
-            session.getAudioTrack().setStreamingMethod(audioApi);
-        }
-
         return session;
     }
 }

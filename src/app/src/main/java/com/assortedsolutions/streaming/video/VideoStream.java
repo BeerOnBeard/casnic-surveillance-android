@@ -36,11 +36,9 @@ import android.hardware.Camera;
 import android.hardware.Camera.CameraInfo;
 import android.hardware.Camera.Parameters;
 import android.media.MediaCodec;
-import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
 import android.os.Looper;
 import android.util.Log;
-import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceHolder.Callback;
 
@@ -56,8 +54,10 @@ public abstract class VideoStream extends MediaStream
     protected SurfaceHolder.Callback mSurfaceHolderCallback = null;
     protected SurfaceView mSurfaceView = null;
     protected SharedPreferences mSettings = null;
-    protected int mVideoEncoder, mCameraId = 0;
-    protected int mRequestedOrientation = 0, mOrientation = 0;
+    protected int mVideoEncoder;
+    protected int mCameraId = 0;
+    protected int mRequestedOrientation = 0;
+    protected int mOrientation = 0;
     protected Camera mCamera;
     protected Thread mCameraThread;
     protected Looper mCameraLooper;
@@ -323,10 +323,7 @@ public abstract class VideoStream extends MediaStream
     {
         if (mCamera != null)
         {
-            if (mMode == MODE_MEDIACODEC_API)
-            {
-                mCamera.setPreviewCallbackWithBuffer(null);
-            }
+            mCamera.setPreviewCallbackWithBuffer(null);
 
             super.stop();
 
@@ -486,21 +483,21 @@ public abstract class VideoStream extends MediaStream
         mCameraThread = new Thread(new Runnable() {
             @Override
             public void run() {
-                Looper.prepare();
-                mCameraLooper = Looper.myLooper();
-                try
-                {
-                    mCamera = Camera.open(mCameraId);
-                }
-                catch (RuntimeException e)
-                {
-                    exception[0] = e;
-                }
-                finally
-                {
-                    lock.release();
-                    Looper.loop();
-                }
+            Looper.prepare();
+            mCameraLooper = Looper.myLooper();
+            try
+            {
+                mCamera = Camera.open(mCameraId);
+            }
+            catch (RuntimeException e)
+            {
+                exception[0] = e;
+            }
+            finally
+            {
+                lock.release();
+                Looper.loop();
+            }
             }
         });
 
@@ -741,6 +738,7 @@ public abstract class VideoStream extends MediaStream
         }
         catch (InterruptedException e)
         {
+            Log.e(TAG, "Measuring frame rate threw", e);
         }
 
         mCamera.setPreviewCallback(null);

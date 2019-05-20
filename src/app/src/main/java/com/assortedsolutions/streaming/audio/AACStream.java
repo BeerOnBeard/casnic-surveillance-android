@@ -139,9 +139,8 @@ public class AACStream extends AudioStream
             mQuality.samplingRate = 16000;
         }
 
-        if (mMode != mRequestedMode || mPacketizer == null)
+        if (mPacketizer == null)
         {
-            mMode = mRequestedMode;
             mPacketizer = new AACLATMPacketizer();
             mPacketizer.setDestination(mDestination, mRtpPort, mRtcpPort);
             mPacketizer.getRtpSocket().setOutputStream(mOutputStream, mChannelIdentifier);
@@ -229,14 +228,11 @@ public class AACStream extends AudioStream
     {
         if (mStreaming)
         {
-            if (mMode == MODE_MEDIACODEC_API)
-            {
-                Log.d(TAG, "Interrupting threads...");
-                mThread.interrupt();
-                mAudioRecord.stop();
-                mAudioRecord.release();
-                mAudioRecord = null;
-            }
+            Log.d(TAG, "Interrupting threads...");
+            mThread.interrupt();
+            mAudioRecord.stop();
+            mAudioRecord.release();
+            mAudioRecord = null;
 
             super.stop();
         }

@@ -107,7 +107,6 @@ public class H264Stream extends VideoStream
     public synchronized void configure() throws IllegalStateException, IOException
     {
         super.configure();
-        mMode = mRequestedMode;
         mQuality = mRequestedQuality.clone();
         mConfig = testMediaCodecAPI();
     }
