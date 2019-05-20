@@ -25,7 +25,6 @@ import java.io.OutputStream;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
-import java.nio.channels.IllegalSelectorException;
 import android.os.SystemClock;
 import android.util.Log;
 
@@ -45,9 +44,14 @@ public class SenderReport
     private int mTransport;
     private OutputStream mOutputStream = null;
     private byte[] mBuffer = new byte[MTU];
-    private int mSSRC, mPort = -1;
-    private int mOctetCount = 0, mPacketCount = 0;
-    private long interval, delta, now, oldnow;
+    private int mSSRC;
+    private int mPort = -1;
+    private int mOctetCount = 0;
+    private int mPacketCount = 0;
+    private long interval;
+    private long delta;
+    private long now;
+    private long oldnow;
     private byte mTcpHeader[];
 
     public SenderReport(int ssrc) throws IOException
