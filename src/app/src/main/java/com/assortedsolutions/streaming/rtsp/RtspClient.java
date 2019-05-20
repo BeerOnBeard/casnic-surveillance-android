@@ -132,6 +132,7 @@ public class RtspClient
 
     public RtspClient()
     {
+        Log.e(TAG, "Client created");
         mCSeq = 0;
         mTmpParameters = new Parameters();
         mTmpParameters.port = 1935;

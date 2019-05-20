@@ -48,13 +48,16 @@ public class MainActivity extends Activity implements Session.Callback, SurfaceH
         //mSession.configure();
 
         Intent server = new Intent(this, RtspServer.class);
+
+        Log.d(TAG, "starting RTSP Server service");
         startService(server);
 
         mSurfaceView.getHolder().addCallback(this);
     }
 
     @Override
-    public void onDestroy() {
+    public void onDestroy()
+    {
         super.onDestroy();
         mSession.release();
     }
@@ -64,35 +67,41 @@ public class MainActivity extends Activity implements Session.Callback, SurfaceH
      ************************************/
 
     @Override
-    public void onBitrateUpdate(long bitrate) {
+    public void onBitrateUpdate(long bitrate)
+    {
         Log.d(TAG,"Bitrate: " + bitrate);
     }
 
     @Override
-    public void onSessionError(int message, int streamType, Exception e) {
+    public void onSessionError(int message, int streamType, Exception e)
+    {
         if (e != null) {
             logError(e.getMessage());
         }
     }
 
     @Override
-    public void onPreviewStarted() {
+    public void onPreviewStarted()
+    {
         Log.d(TAG,"Preview Started");
     }
 
     @Override
-    public void onSessionConfigured() {
+    public void onSessionConfigured()
+    {
         Log.d(TAG, "Session Configured");
         mSession.start();
     }
 
     @Override
-    public void onSessionStarted() {
+    public void onSessionStarted()
+    {
         Log.d(TAG,"Session Started");
     }
 
     @Override
-    public void onSessionStopped() {
+    public void onSessionStopped()
+    {
         Log.d(TAG,"Session Stopped");
     }
 
@@ -101,20 +110,28 @@ public class MainActivity extends Activity implements Session.Callback, SurfaceH
      ******************************************/
 
     @Override
-    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {}
+    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height)
+    {
+        Log.d(TAG, "Surface Changed");
+    }
 
     @Override
-    public void surfaceCreated(SurfaceHolder holder) {
+    public void surfaceCreated(SurfaceHolder holder)
+    {
+        Log.d(TAG, "Surface Created");
         mSession.startPreview();
     }
 
     @Override
-    public void surfaceDestroyed(SurfaceHolder holder) {
+    public void surfaceDestroyed(SurfaceHolder holder)
+    {
+        Log.d(TAG, "Surface Destroyed");
         mSession.stop();
     }
 
     /** Displays a popup to report the error to the user */
-    private void logError(final String msg) {
+    private void logError(final String msg)
+    {
         final String error = (msg == null) ? "Error unknown" : msg;
 
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);

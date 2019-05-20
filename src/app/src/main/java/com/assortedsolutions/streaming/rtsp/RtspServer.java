@@ -34,11 +34,9 @@ import java.util.WeakHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import com.assortedsolutions.streaming.Session;
-import com.assortedsolutions.streaming.SessionBuilder;
 import android.app.Service;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.SharedPreferences.Editor;
 import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.os.Binder;
 import android.os.IBinder;
@@ -82,7 +80,6 @@ public class RtspServer extends Service
     /** Key used in the SharedPreferences for the port used by the RTSP server. */
     public final static String KEY_PORT = "rtsp_port";
 
-    protected SessionBuilder mSessionBuilder;
     protected SharedPreferences mSharedPreferences;
     protected boolean mEnabled = true;
     protected int mPort = DEFAULT_RTSP_PORT;
@@ -99,6 +96,61 @@ public class RtspServer extends Service
 
     public RtspServer() {}
 
+    /****************************************
+     *  android.Service implementation      *
+     ****************************************/
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId)
+    {
+        return super.onStartCommand(intent, flags, startId);
+    }
+
+    @Override
+    public void onCreate()
+    {
+        Log.d(TAG, "Creating...");
+
+        // Let's restore the state of the service
+        mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+        mPort = Integer.parseInt(mSharedPreferences.getString(KEY_PORT, String.valueOf(mPort)));
+        mEnabled = mSharedPreferences.getBoolean(KEY_ENABLED, mEnabled);
+
+        // If the configuration is modified, the server will adjust
+        mSharedPreferences.registerOnSharedPreferenceChangeListener(mOnSharedPreferenceChangeListener);
+
+        start();
+    }
+
+    @Override
+    public void onDestroy()
+    {
+        Log.d(TAG, "Destroying...");
+
+        stop();
+        mSharedPreferences.unregisterOnSharedPreferenceChangeListener(mOnSharedPreferenceChangeListener);
+    }
+
+    /** The Binder you obtain when a connection with the Service is established. */
+    public class LocalBinder extends Binder
+    {
+        public RtspServer getService()
+        {
+            return RtspServer.this;
+        }
+    }
+
+    @Override
+    public IBinder onBind(Intent intent)
+    {
+        Log.d(TAG, "Intent bound");
+        return mBinder;
+    }
+
+    /**************************************
+     *  Callback listener                 *
+     **************************************/
+
     /** Be careful: those callbacks won't necessarily be called from the ui thread ! */
     public interface CallbackListener
     {
@@ -109,11 +161,7 @@ public class RtspServer extends Service
         void onMessage(RtspServer server, int message);
     }
 
-    /**
-     * See {@link RtspServer.CallbackListener} to check out what events will be fired once you set up a listener.
-     * @param listener The listener
-     */
-    public void addCallbackListener(CallbackListener listener)
+    protected void postMessage(int id)
     {
         synchronized (mListeners)
         {
@@ -121,41 +169,29 @@ public class RtspServer extends Service
             {
                 for (CallbackListener cl : mListeners)
                 {
-                    if (cl == listener) return;
+                    cl.onMessage(this, id);
                 }
             }
-
-            mListeners.add(listener);
         }
     }
 
-    /**
-     * Removes the listener.
-     * @param listener The listener
-     */
-    public void removeCallbackListener(CallbackListener listener)
+    protected void postError(Exception exception, int id)
     {
         synchronized (mListeners)
         {
-            mListeners.remove(listener);
+            if (!mListeners.isEmpty())
+            {
+                for (CallbackListener cl : mListeners)
+                {
+                    cl.onError(this, exception, id);
+                }
+            }
         }
     }
 
-    /** Returns the port used by the RTSP server. */
-    public int getPort() {
-        return mPort;
-    }
-
-    /**
-     * Sets the port for the RTSP server to use.
-     * @param port The port
-     */
-    public void setPort(int port)
-    {
-        Editor editor = mSharedPreferences.edit();
-        editor.putString(KEY_PORT, String.valueOf(port));
-        editor.commit();
-    }
+    /**************************************
+     *  Server methods                    *
+     **************************************/
 
     /**
      * Set Basic authorization to access RTSP Stream
@@ -166,6 +202,35 @@ public class RtspServer extends Service
     {
         mUsername = username;
         mPassword = password;
+    }
+
+    /** Returns whether or not the RTSP server is streaming to some client(s). */
+    public boolean isStreaming()
+    {
+        for (Session session : mSessions.keySet())
+        {
+            if (session != null && session.isStreaming())
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** Returns the bandwidth consumed by the RTSP server in bits per second. */
+    public long getBitrate()
+    {
+        long bitrate = 0;
+        for (Session session : mSessions.keySet())
+        {
+            if (session != null && session.isStreaming())
+            {
+                bitrate += session.getBitrate();
+            }
+        }
+
+        return bitrate;
     }
 
     /**
@@ -187,6 +252,7 @@ public class RtspServer extends Service
             }
             catch (Exception e)
             {
+                Log.e(TAG, "Creating request listener failed", e);
                 mListenerThread = null;
             }
         }
@@ -224,68 +290,6 @@ public class RtspServer extends Service
         }
     }
 
-    /** Returns whether or not the RTSP server is streaming to some client(s). */
-    public boolean isStreaming()
-    {
-        for (Session session : mSessions.keySet())
-        {
-            if (session != null && session.isStreaming())
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    public boolean isEnabled() {
-        return mEnabled;
-    }
-
-    /** Returns the bandwidth consumed by the RTSP server in bits per second. */
-    public long getBitrate()
-    {
-        long bitrate = 0;
-        for (Session session : mSessions.keySet())
-        {
-            if (session != null && session.isStreaming())
-            {
-                bitrate += session.getBitrate();
-            }
-        }
-
-        return bitrate;
-    }
-
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        return START_STICKY;
-    }
-
-    @Override
-    public void onCreate()
-    {
-        // Let's restore the state of the service
-        mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
-        mPort = Integer.parseInt(mSharedPreferences.getString(KEY_PORT, String.valueOf(mPort)));
-        mEnabled = mSharedPreferences.getBoolean(KEY_ENABLED, mEnabled);
-
-        // If the configuration is modified, the server will adjust
-        mSharedPreferences.registerOnSharedPreferenceChangeListener(mOnSharedPreferenceChangeListener);
-
-        Log.e(TAG, "port");
-        Log.e(TAG, String.valueOf(mPort));
-
-        start();
-    }
-
-    @Override
-    public void onDestroy()
-    {
-        stop();
-        mSharedPreferences.unregisterOnSharedPreferenceChangeListener(mOnSharedPreferenceChangeListener);
-    }
-
     private OnSharedPreferenceChangeListener mOnSharedPreferenceChangeListener = new OnSharedPreferenceChangeListener()
     {
         @Override
@@ -308,47 +312,6 @@ public class RtspServer extends Service
             }
         }
     };
-
-    /** The Binder you obtain when a connection with the Service is established. */
-    public class LocalBinder extends Binder
-    {
-        public RtspServer getService() {
-            return RtspServer.this;
-        }
-    }
-
-    @Override
-    public IBinder onBind(Intent intent) {
-        return mBinder;
-    }
-
-    protected void postMessage(int id)
-    {
-        synchronized (mListeners)
-        {
-            if (!mListeners.isEmpty())
-            {
-                for (CallbackListener cl : mListeners)
-                {
-                    cl.onMessage(this, id);
-                }
-            }
-        }
-    }
-
-    protected void postError(Exception exception, int id)
-    {
-        synchronized (mListeners)
-        {
-            if (!mListeners.isEmpty())
-            {
-                for (CallbackListener cl : mListeners)
-                {
-                    cl.onError(this, exception, id);
-                }
-            }
-        }
-    }
 
     /**
      * By default the RTSP uses {@link UriParser} to parse the URI requested by the client
@@ -769,7 +732,7 @@ public class RtspServer extends Service
             {
                 matcher = regexHeader.matcher(line);
                 matcher.find();
-                request.headers.put(matcher.group(1).toLowerCase(Locale.US),matcher.group(2));
+                request.headers.put(matcher.group(1).toLowerCase(Locale.US), matcher.group(2));
             }
 
             if (line == null)
@@ -777,8 +740,7 @@ public class RtspServer extends Service
                 throw new SocketException("Client disconnected");
             }
 
-            // It's not an error, it's just easier to follow what's happening in logcat with the request in red
-            Log.e(TAG,request.method+" "+request.uri);
+            Log.i(TAG, request.method + " " + request.uri);
 
             return request;
         }

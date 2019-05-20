@@ -12,3 +12,20 @@ Uses code from [fyhertz/libstreaming](https://github.com/fyhertz/libstreaming/tr
 1. Start stream in VLC
   - Open VLC
   - Media => Open Network Stream... => `rtsp://xxx.xxx.xxx.xxx:8086` (using IP of phone)
+
+# Settings
+
+Settings are controlled using `PreferenceManager`. In order to update settings, the following code can be used:
+
+```java
+Editor editor = PreferenceManager.getDefaultSharedPreferences(this).edit();
+editor.putString(RtspServer.KEY_PORT), String.valueOf(8086));
+editor.commit();
+```
+
+## RTSP Server
+
+| Key         | Default Value |
+| ----------- | ------------- |
+| KEY_ENABLED | true          |
+| KEY_PORT    | 8086          |

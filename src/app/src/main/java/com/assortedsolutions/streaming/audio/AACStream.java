@@ -320,6 +320,8 @@ public class AACStream extends AudioStream
      */
     private void testADTS() throws IllegalStateException, IOException
     {
+        Log.e(TAG, "Testing ADTS...");
+
         setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
         try
         {
