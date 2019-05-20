@@ -5,14 +5,10 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
-import android.hardware.Camera;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.SurfaceHolder;
-import android.view.View;
 import android.view.WindowManager;
-import android.widget.Button;
-import android.widget.EditText;
 
 import com.assortedsolutions.streaming.Session;
 import com.assortedsolutions.streaming.SessionBuilder;
@@ -32,7 +28,7 @@ public class MainActivity extends Activity implements Session.Callback, SurfaceH
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        //setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT);
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         mSurfaceView = findViewById(R.id.surface);
@@ -40,16 +36,16 @@ public class MainActivity extends Activity implements Session.Callback, SurfaceH
         mSession = SessionBuilder.getInstance()
                 .setCallback(this)
                 .setSurfaceView(mSurfaceView)
-                //.setPreviewOrientation(90)
+                .setPreviewOrientation(90)
                 .setContext(getApplicationContext())
-                //.setAudioEncoder(SessionBuilder.AUDIO_NONE)
-                //.setAudioQuality(new AudioQuality(16000, 32000))
+                .setAudioEncoder(SessionBuilder.AUDIO_AAC)
+                .setAudioQuality(new AudioQuality(16000, 32000))
                 .setVideoEncoder(SessionBuilder.VIDEO_H264)
-                .setVideoQuality(new VideoQuality(320,240,20,500000))
+                .setVideoQuality(new VideoQuality(320, 240, 20, 500000))
                 .build();
 
-        mSession.setDestination("192.168.50.230");
-        mSession.configure();
+        //mSession.setDestination("192.168.50.230");
+        //mSession.configure();
 
         Intent server = new Intent(this, RtspServer.class);
         startService(server);

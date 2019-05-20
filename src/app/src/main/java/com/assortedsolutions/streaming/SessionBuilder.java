@@ -19,13 +19,10 @@
 package com.assortedsolutions.streaming;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import com.assortedsolutions.streaming.audio.AACStream;
-import com.assortedsolutions.streaming.audio.AMRNBStream;
 import com.assortedsolutions.streaming.audio.AudioQuality;
 import com.assortedsolutions.streaming.audio.AudioStream;
 import com.assortedsolutions.streaming.gl.SurfaceView;
-import com.assortedsolutions.streaming.video.H263Stream;
 import com.assortedsolutions.streaming.video.H264Stream;
 import com.assortedsolutions.streaming.video.VideoQuality;
 import com.assortedsolutions.streaming.video.VideoStream;
@@ -46,14 +43,8 @@ public class SessionBuilder
     /** Can be used with {@link #setVideoEncoder}. */
     public final static int VIDEO_H264 = 1;
 
-    /** Can be used with {@link #setVideoEncoder}. */
-    public final static int VIDEO_H263 = 2;
-
     /** Can be used with {@link #setAudioEncoder}. */
     public final static int AUDIO_NONE = 0;
-
-    /** Can be used with {@link #setAudioEncoder}. */
-    public final static int AUDIO_AMRNB = 3;
 
     /** Can be used with {@link #setAudioEncoder}. */
     public final static int AUDIO_AAC = 5;
@@ -62,8 +53,8 @@ public class SessionBuilder
     private VideoQuality mVideoQuality = VideoQuality.DEFAULT_VIDEO_QUALITY;
     private AudioQuality mAudioQuality = AudioQuality.DEFAULT_AUDIO_QUALITY;
     private Context mContext;
-    private int mVideoEncoder = VIDEO_H263;
-    private int mAudioEncoder = AUDIO_AMRNB;
+    private int mVideoEncoder = VIDEO_H264;
+    private int mAudioEncoder = AUDIO_AAC;
     private int mCamera = CameraInfo.CAMERA_FACING_BACK;
     private int mTimeToLive = 64;
     private int mOrientation = 0;
@@ -122,23 +113,19 @@ public class SessionBuilder
                 {
                     stream.setPreferences(PreferenceManager.getDefaultSharedPreferences(mContext));
                 }
-                break;
-            case AUDIO_AMRNB:
-                session.addAudioTrack(new AMRNBStream());
+
                 break;
         }
 
         switch (mVideoEncoder)
         {
-            case VIDEO_H263:
-                session.addVideoTrack(new H263Stream(mCamera));
-                break;
             case VIDEO_H264:
                 H264Stream stream = new H264Stream(mCamera);
-                if (mContext!=null)
+                if (mContext != null)
                 {
                     stream.setPreferences(PreferenceManager.getDefaultSharedPreferences(mContext));
                 }
+
                 session.addVideoTrack(stream);
                 break;
         }

@@ -36,6 +36,7 @@ import android.hardware.Camera.CameraInfo;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
+import android.util.Log;
 
 /**
  * You should instantiate this class with the {@link SessionBuilder}.<br />
@@ -242,6 +243,7 @@ public class Session
      */
     public void setDestination(String destination)
     {
+        Log.e(TAG, "Destination set to " + destination);
         mDestination =  destination;
     }
 
@@ -381,12 +383,16 @@ public class Session
         long sum = 0;
         if (mAudioStream != null)
         {
-            sum += mAudioStream.getBitrate();
+            long bitrate = mAudioStream.getBitrate();
+            Log.e(TAG, "Audio bitrate" + bitrate);
+            sum += bitrate;
         }
 
         if (mVideoStream != null)
         {
-            sum += mVideoStream.getBitrate();
+            long bitrate = mVideoStream.getBitrate();
+            Log.e(TAG, "Video bitrate" + bitrate);
+            sum += bitrate;
         }
 
         return sum;

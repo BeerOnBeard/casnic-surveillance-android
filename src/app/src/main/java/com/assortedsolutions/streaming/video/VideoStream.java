@@ -183,19 +183,20 @@ public abstract class VideoStream extends MediaStream
                 {
                     mSurfaceReady = false;
                     stopPreview();
-                    Log.d(TAG,"Surface destroyed !");
+                    Log.d(TAG,"Surface destroyed!");
                 }
 
                 @Override
                 public void surfaceCreated(SurfaceHolder holder)
                 {
+                    Log.d(TAG, "Surface created");
                     mSurfaceReady = true;
                 }
 
                 @Override
                 public void surfaceChanged(SurfaceHolder holder, int format, int width, int height)
                 {
-                    Log.d(TAG,"Surface Changed !");
+                    Log.d(TAG,"Surface Changed!");
                 }
             };
 
@@ -715,7 +716,7 @@ public abstract class VideoStream extends MediaStream
                 }
                 else
                 {
-                    Log.e(TAG,"Error unknown with the camera: "+error);
+                    Log.e(TAG,"Error unknown with the camera: " + error);
                 }
                 }
             });

@@ -94,7 +94,7 @@ public class MediaCodecInputStream extends InputStream
                     }
                     else
                     {
-                        Log.e(TAG,"Message: "+mIndex);
+                        Log.e(TAG,"Message: " + mIndex);
                         //return 0;
                     }
                 }

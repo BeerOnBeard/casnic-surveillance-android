@@ -19,9 +19,7 @@
 package com.assortedsolutions.streaming.rtsp;
 
 import static com.assortedsolutions.streaming.SessionBuilder.AUDIO_AAC;
-import static com.assortedsolutions.streaming.SessionBuilder.AUDIO_AMRNB;
 import static com.assortedsolutions.streaming.SessionBuilder.AUDIO_NONE;
-import static com.assortedsolutions.streaming.SessionBuilder.VIDEO_H263;
 import static com.assortedsolutions.streaming.SessionBuilder.VIDEO_H264;
 import static com.assortedsolutions.streaming.SessionBuilder.VIDEO_NONE;
 
@@ -68,7 +66,7 @@ public class UriParser
         String query = URI.create(uri).getQuery();
         String[] queryParams = query == null ? new String[0] : query.split("&");
         ContentValues params = new ContentValues();
-        for(String param:queryParams)
+        for (String param : queryParams)
         {
             String[] keyValue = param.split("=");
             String value = "";
@@ -89,11 +87,14 @@ public class UriParser
 
         if (params.size() > 0)
         {
-            builder.setAudioEncoder(AUDIO_NONE).setVideoEncoder(VIDEO_NONE);
-            Set<String> paramKeys=params.keySet();
+            builder
+                .setAudioEncoder(AUDIO_NONE)
+                .setVideoEncoder(VIDEO_NONE);
+
+            Set<String> paramKeys = params.keySet();
 
             // Those parameters must be parsed first or else they won't necessarily be taken into account
-            for(String paramName: paramKeys)
+            for(String paramName : paramKeys)
             {
                 String paramValue = params.getAsString(paramName);
 
@@ -216,20 +217,6 @@ public class UriParser
                 {
                     VideoQuality quality = VideoQuality.parseQuality(paramValue);
                     builder.setVideoQuality(quality).setVideoEncoder(VIDEO_H264);
-                }
-
-                // H.263
-                else if (paramName.equalsIgnoreCase("h263"))
-                {
-                    VideoQuality quality = VideoQuality.parseQuality(paramValue);
-                    builder.setVideoQuality(quality).setVideoEncoder(VIDEO_H263);
-                }
-
-                // AMR
-                else if (paramName.equalsIgnoreCase("amrnb") || paramName.equalsIgnoreCase("amr"))
-                {
-                    AudioQuality quality = AudioQuality.parseQuality(paramValue);
-                    builder.setAudioQuality(quality).setAudioEncoder(AUDIO_AMRNB);
                 }
 
                 // AAC

@@ -26,14 +26,14 @@ import android.util.Log;
 
 /**
  * A class that represents the quality of a video stream.
- * It contains the resolution, the framerate (in fps) and the bitrate (in bps) of the stream.
+ * It contains the resolution, the frame rate (in fps) and the bitrate (in bps) of the stream.
  */
 public class VideoQuality
 {
     public final static String TAG = "VideoQuality";
 
     /** Default video stream quality. */
-    public final static VideoQuality DEFAULT_VIDEO_QUALITY = new VideoQuality(176,144,20,500000);
+    public final static VideoQuality DEFAULT_VIDEO_QUALITY = new VideoQuality(320, 240, 20, 500000);
 
     /**	Represents a quality for a video stream. */
     public VideoQuality() {}
@@ -128,7 +128,7 @@ public class VideoQuality
             Size size = it.next();
             supportedSizesStr += size.width + "x" + size.height + (it.hasNext() ? ", " : "");
             int dist = Math.abs(quality.resX - size.width);
-            if (dist<minDist)
+            if (dist < minDist)
             {
                 minDist = dist;
                 v.resX = size.width;
