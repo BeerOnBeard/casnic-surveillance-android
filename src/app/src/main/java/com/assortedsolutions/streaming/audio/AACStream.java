@@ -18,19 +18,12 @@
 
 package com.assortedsolutions.streaming.audio;
 
-import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
-import java.lang.reflect.Field;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import com.assortedsolutions.streaming.SessionBuilder;
-import com.assortedsolutions.streaming.rtp.AACADTSPacketizer;
 import com.assortedsolutions.streaming.rtp.AACLATMPacketizer;
 import com.assortedsolutions.streaming.rtp.MediaCodecInputStream;
-import android.annotation.SuppressLint;
-import android.content.SharedPreferences;
-import android.content.SharedPreferences.Editor;
 import android.media.AudioFormat;
 import android.media.AudioRecord;
 import android.media.MediaCodec;
@@ -38,7 +31,6 @@ import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
 import android.media.MediaRecorder;
 import android.os.Build;
-import android.os.Environment;
 import android.service.textservice.SpellCheckerService.Session;
 import android.util.Log;
 
@@ -52,16 +44,6 @@ import android.util.Log;
 public class AACStream extends AudioStream
 {
     public final static String TAG = "AACStream";
-
-    /** MPEG-4 Audio Object Types supported by ADTS. **/
-    private static final String[] AUDIO_OBJECT_TYPES =
-    {
-        "NULL",							  // 0
-        "AAC Main",						  // 1
-        "AAC LC (Low Complexity)",		  // 2
-        "AAC SSR (Scalable Sample Rate)", // 3
-        "AAC LTP (Long Term Prediction)"  // 4
-    };
 
     /** There are 13 supported frequencies by ADTS. **/
     public static final int[] AUDIO_SAMPLING_RATES =
@@ -85,8 +67,10 @@ public class AACStream extends AudioStream
     };
 
     private String mSessionDescription = null;
-    private int mProfile, mSamplingRateIndex, mChannel, mConfig;
-    private SharedPreferences mSettings = null;
+    private int mProfile;
+    private int mSamplingRateIndex;
+    private int mChannel;
+    private int mConfig;
     private AudioRecord mAudioRecord = null;
     private Thread mThread = null;
 
@@ -121,14 +105,6 @@ public class AACStream extends AudioStream
         {
             return false;
         }
-    }
-
-    /**
-     * Some data (the actual sampling rate used by the phone and the AAC profile) needs to be stored once {@link #getSessionDescription()} is called.
-     * @param prefs The SharedPreferences that will be used to store the sampling rate
-     */
-    public void setPreferences(SharedPreferences prefs) {
-        mSettings = prefs;
     }
 
     @Override
@@ -166,53 +142,19 @@ public class AACStream extends AudioStream
         if (mMode != mRequestedMode || mPacketizer == null)
         {
             mMode = mRequestedMode;
-            if (mMode == MODE_MEDIARECORDER_API)
-            {
-                mPacketizer = new AACADTSPacketizer();
-            }
-            else
-            {
-                mPacketizer = new AACLATMPacketizer();
-            }
-
+            mPacketizer = new AACLATMPacketizer();
             mPacketizer.setDestination(mDestination, mRtpPort, mRtcpPort);
             mPacketizer.getRtpSocket().setOutputStream(mOutputStream, mChannelIdentifier);
         }
 
-        if (mMode == MODE_MEDIARECORDER_API)
-        {
-            testADTS();
+        mProfile = 2; // AAC LC
+        mChannel = 1;
+        mConfig = (mProfile & 0x1F) << 11 | (mSamplingRateIndex & 0x0F) << 7 | (mChannel & 0x0F) << 3;
 
-            // All the MIME types parameters used here are described in RFC 3640
-            // SizeLength: 13 bits will be enough because ADTS uses 13 bits for frame length
-            // config: contains the object type + the sampling rate + the channel number
-
-            // TODO: streamType always 5 ? profile-level-id always 15 ?
-
-            mSessionDescription = "m=audio " + getDestinationPorts()[0] + " RTP/AVP 96\r\n" +
-                    "a=rtpmap:96 mpeg4-generic/" + mQuality.samplingRate + "\r\n" +
-                    "a=fmtp:96 streamtype=5; profile-level-id=15; mode=AAC-hbr; config=" + Integer.toHexString(mConfig) +
-                    "; SizeLength=13; IndexLength=3; IndexDeltaLength=3;\r\n";
-        }
-        else
-        {
-            mProfile = 2; // AAC LC
-            mChannel = 1;
-            mConfig = (mProfile & 0x1F) << 11 | (mSamplingRateIndex & 0x0F) << 7 | (mChannel & 0x0F) << 3;
-
-            mSessionDescription = "m=audio " + getDestinationPorts()[0] + " RTP/AVP 96\r\n" +
-                    "a=rtpmap:96 mpeg4-generic/" + mQuality.samplingRate + "\r\n" +
-                    "a=fmtp:96 streamtype=5; profile-level-id=15; mode=AAC-hbr; config=" + Integer.toHexString(mConfig) +
-                    "; SizeLength=13; IndexLength=3; IndexDeltaLength=3;\r\n";
-        }
-    }
-
-    @Override
-    protected void encodeWithMediaRecorder() throws IOException
-    {
-        testADTS();
-        ((AACADTSPacketizer)mPacketizer).setSamplingRate(mQuality.samplingRate);
-        super.encodeWithMediaRecorder();
+        mSessionDescription = "m=audio " + getDestinationPorts()[0] + " RTP/AVP 96\r\n" +
+                "a=rtpmap:96 mpeg4-generic/" + mQuality.samplingRate + "\r\n" +
+                "a=fmtp:96 streamtype=5; profile-level-id=15; mode=AAC-hbr; config=" + Integer.toHexString(mConfig) +
+                "; SizeLength=13; IndexLength=3; IndexDeltaLength=3;\r\n";
     }
 
     @Override
@@ -241,23 +183,26 @@ public class AACStream extends AudioStream
         mThread = new Thread(new Runnable() {
             @Override
             public void run() {
-            int len = 0, bufferIndex = 0;
+            int len = 0;
+            int bufferIndex = 0;
+
             try
             {
                 while (!Thread.interrupted())
                 {
                     bufferIndex = mMediaCodec.dequeueInputBuffer(10000);
+
                     if (bufferIndex >= 0)
                     {
                         inputBuffers[bufferIndex].clear();
                         len = mAudioRecord.read(inputBuffers[bufferIndex], bufferSize);
+
                         if (len ==  AudioRecord.ERROR_INVALID_OPERATION || len == AudioRecord.ERROR_BAD_VALUE)
                         {
-                            Log.e(TAG,"An error occured with the AudioRecord API !");
+                            Log.e(TAG,"An error occurred with the AudioRecord API: " + len);
                         }
                         else
                         {
-                            //Log.v(TAG,"Pushing raw audio to the decoder: len="+len+" bs: "+inputBuffers[bufferIndex].capacity());
                             mMediaCodec.queueInputBuffer(bufferIndex, 0, len, System.nanoTime() / 1000, 0);
                         }
                     }
@@ -309,123 +254,5 @@ public class AACStream extends AudioStream
         }
 
         return mSessionDescription;
-    }
-
-    /**
-     * Records a short sample of AAC ADTS from the microphone to find out what the sampling rate really is
-     * On some phone indeed, no error will be reported if the sampling rate used differs from the
-     * one selected with setAudioSamplingRate
-     * @throws IOException
-     * @throws IllegalStateException
-     */
-    private void testADTS() throws IllegalStateException, IOException
-    {
-        Log.e(TAG, "Testing ADTS...");
-
-        setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-        try
-        {
-            Field name = MediaRecorder.OutputFormat.class.getField("AAC_ADTS");
-            setOutputFormat(name.getInt(null));
-        }
-        catch (Exception ignore)
-        {
-            setOutputFormat(6);
-        }
-
-        String key = PREF_PREFIX + "aac-" + mQuality.samplingRate;
-
-        if (mSettings != null && mSettings.contains(key))
-        {
-            String[] s = mSettings.getString(key, "").split(",");
-            mQuality.samplingRate = Integer.valueOf(s[0]);
-            mConfig = Integer.valueOf(s[1]);
-            mChannel = Integer.valueOf(s[2]);
-            return;
-        }
-
-        final String TESTFILE = Environment.getExternalStorageDirectory().getPath() + "/spydroid-test.adts";
-        if (!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED))
-        {
-            throw new IllegalStateException("No external storage or external storage not ready !");
-        }
-
-        // The structure of an ADTS packet is described here: http://wiki.multimedia.cx/index.php?title=ADTS
-
-        // ADTS header is 7 or 9 bytes long
-        byte[] buffer = new byte[9];
-
-        mMediaRecorder = new MediaRecorder();
-        mMediaRecorder.setAudioSource(mAudioSource);
-        mMediaRecorder.setOutputFormat(mOutputFormat);
-        mMediaRecorder.setAudioEncoder(mAudioEncoder);
-        mMediaRecorder.setAudioChannels(1);
-        mMediaRecorder.setAudioSamplingRate(mQuality.samplingRate);
-        mMediaRecorder.setAudioEncodingBitRate(mQuality.bitRate);
-        mMediaRecorder.setOutputFile(TESTFILE);
-        mMediaRecorder.setMaxDuration(1000);
-        mMediaRecorder.prepare();
-        mMediaRecorder.start();
-
-        // We record for 1 sec
-        // TODO: use the MediaRecorder.OnInfoListener
-        try
-        {
-            Thread.sleep(2000);
-        }
-        catch (InterruptedException e)
-        {
-            Log.e(TAG, "Thread sleep threw", e);
-        }
-
-        mMediaRecorder.stop();
-        mMediaRecorder.release();
-        mMediaRecorder = null;
-
-        File file = new File(TESTFILE);
-        RandomAccessFile raf = new RandomAccessFile(file, "r");
-
-        // ADTS packets start with a sync word: 12bits set to 1
-        while (true)
-        {
-            if ( (raf.readByte() & 0xFF) == 0xFF )
-            {
-                buffer[0] = raf.readByte();
-                if ( (buffer[0] & 0xF0) == 0xF0)
-                {
-                    break;
-                }
-            }
-        }
-
-        raf.read(buffer,1,5);
-
-        mSamplingRateIndex = (buffer[1] & 0x3C) >> 2;
-        mProfile = ( (buffer[1] & 0xC0) >> 6 ) + 1 ;
-        mChannel = (buffer[1] & 0x01) << 2 | (buffer[2] & 0xC0) >> 6;
-        mQuality.samplingRate = AUDIO_SAMPLING_RATES[mSamplingRateIndex];
-
-        // 5 bits for the object type / 4 bits for the sampling rate / 4 bits for the channel / padding
-        mConfig = (mProfile & 0x1F) << 11 | (mSamplingRateIndex & 0x0F) << 7 | (mChannel & 0x0F) << 3;
-
-        Log.i(TAG,"MPEG VERSION: " + ( (buffer[0] & 0x08) >> 3 ) );
-        Log.i(TAG,"PROTECTION: " + (buffer[0] & 0x01) );
-        Log.i(TAG,"PROFILE: " + AUDIO_OBJECT_TYPES[ mProfile ] );
-        Log.i(TAG,"SAMPLING FREQUENCY: " + mQuality.samplingRate );
-        Log.i(TAG,"CHANNEL: " + mChannel );
-
-        raf.close();
-
-        if (mSettings != null)
-        {
-            Editor editor = mSettings.edit();
-            editor.putString(key, mQuality.samplingRate + "," + mConfig + "," + mChannel);
-            editor.commit();
-        }
-
-        if (!file.delete())
-        {
-            Log.e(TAG,"Temp file could not be erased");
-        }
     }
 }

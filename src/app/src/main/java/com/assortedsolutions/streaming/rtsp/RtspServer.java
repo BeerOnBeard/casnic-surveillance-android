@@ -454,8 +454,7 @@ public class RtspServer extends Service
                     {
                         // This alerts the main thread that something has gone wrong in this thread
                         postError(e, ERROR_START_FAILED);
-                        Log.e(TAG, e.getMessage() != null ? e.getMessage() : "An error occurred");
-                        e.printStackTrace();
+                        Log.e(TAG, e.getMessage() != null ? e.getMessage() : "An error occurred", e);
                         response = new Response(request);
                     }
                 }

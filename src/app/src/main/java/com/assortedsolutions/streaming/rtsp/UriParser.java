@@ -161,32 +161,24 @@ public class UriParser
                     }
                 }
 
-                // VIDEOAPI -> can be used to specify what api will be used to encode video (the MediaRecorder API or the MediaCodec API)
+                // VIDEOAPI -> can be used to specify what api will be used to encode video. The MediaCodec API is the only supported.
                 else if (paramName.equalsIgnoreCase("videoapi"))
                 {
-                    if (paramValue!=null)
+                    if (paramValue != null)
                     {
-                        if (paramValue.equalsIgnoreCase("mr"))
-                        {
-                            videoApi = MediaStream.MODE_MEDIARECORDER_API;
-                        }
-                        else if (paramValue.equalsIgnoreCase("mc"))
+                        if (paramValue.equalsIgnoreCase("mc"))
                         {
                             videoApi = MediaStream.MODE_MEDIACODEC_API;
                         }
                     }
                 }
 
-                // AUDIOAPI -> can be used to specify what api will be used to encode audio (the MediaRecorder API or the MediaCodec API)
+                // AUDIOAPI -> can be used to specify what api will be used to encode audio. The MediaCodec API is the only supported.
                 else if (paramName.equalsIgnoreCase("audioapi"))
                 {
-                    if (paramValue!=null)
+                    if (paramValue != null)
                     {
-                        if (paramValue.equalsIgnoreCase("mr"))
-                        {
-                            audioApi = MediaStream.MODE_MEDIARECORDER_API;
-                        }
-                        else if (paramValue.equalsIgnoreCase("mc"))
+                        if (paramValue.equalsIgnoreCase("mc"))
                         {
                             audioApi = MediaStream.MODE_MEDIACODEC_API;
                         }

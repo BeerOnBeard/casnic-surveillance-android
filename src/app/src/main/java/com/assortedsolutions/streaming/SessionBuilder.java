@@ -109,11 +109,6 @@ public class SessionBuilder
             case AUDIO_AAC:
                 AACStream stream = new AACStream();
                 session.addAudioTrack(stream);
-                if (mContext!=null)
-                {
-                    stream.setPreferences(PreferenceManager.getDefaultSharedPreferences(mContext));
-                }
-
                 break;
         }
 
