@@ -30,9 +30,6 @@ public class AudioQuality
     /** Default audio stream quality. */
     public final static AudioQuality DEFAULT_AUDIO_QUALITY = new AudioQuality(8000,32000);
 
-    /**	Represents a quality for a video stream. */
-    public AudioQuality() {}
-
     /**
      * Represents a quality for an audio stream.
      * @param samplingRate The sampling rate
@@ -46,16 +43,6 @@ public class AudioQuality
 
     public int samplingRate = 0;
     public int bitRate = 0;
-
-    public boolean equals(AudioQuality quality)
-    {
-        if (quality==null)
-        {
-            return false;
-        }
-
-        return (quality.samplingRate == this.samplingRate && quality.bitRate == this.bitRate);
-    }
 
     public AudioQuality clone()
     {
