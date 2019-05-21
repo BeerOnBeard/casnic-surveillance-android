@@ -22,13 +22,13 @@ import java.io.IOException;
 import com.assortedsolutions.streaming.audio.AACStream;
 import com.assortedsolutions.streaming.audio.AudioQuality;
 import com.assortedsolutions.streaming.audio.AudioStream;
-import com.assortedsolutions.streaming.gl.SurfaceView;
 import com.assortedsolutions.streaming.video.H264Stream;
 import com.assortedsolutions.streaming.video.VideoQuality;
 import com.assortedsolutions.streaming.video.VideoStream;
 import android.content.Context;
 import android.hardware.Camera.CameraInfo;
 import android.preference.PreferenceManager;
+import android.view.SurfaceView;
 
 /**
  * Call {@link #getInstance()} to get access to the SessionBuilder.

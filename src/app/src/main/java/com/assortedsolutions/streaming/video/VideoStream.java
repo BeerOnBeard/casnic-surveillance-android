@@ -26,7 +26,6 @@ import com.assortedsolutions.streaming.MediaStream;
 import com.assortedsolutions.streaming.Stream;
 import com.assortedsolutions.streaming.exceptions.CameraInUseException;
 import com.assortedsolutions.streaming.exceptions.InvalidSurfaceException;
-import com.assortedsolutions.streaming.gl.SurfaceView;
 import com.assortedsolutions.streaming.hw.EncoderDebugger;
 import com.assortedsolutions.streaming.hw.NV21Convertor;
 import com.assortedsolutions.streaming.rtp.MediaCodecInputStream;
@@ -41,6 +40,7 @@ import android.os.Looper;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceHolder.Callback;
+import android.view.SurfaceView;
 
 /**
  * Don't use this class directly.
@@ -616,9 +616,6 @@ public abstract class VideoStream extends MediaStream
         Parameters parameters = mCamera.getParameters();
         mQuality = VideoQuality.determineClosestSupportedResolution(parameters, mQuality);
         int[] max = VideoQuality.determineMaximumSupportedFramerate(parameters);
-
-        double ratio = (double)mQuality.resX / (double)mQuality.resY;
-        mSurfaceView.requestAspectRatio(ratio);
 
         parameters.setPreviewFormat(mCameraImageFormat);
         parameters.setPreviewSize(mQuality.resX, mQuality.resY);

@@ -8,12 +8,12 @@ import android.content.pm.ActivityInfo;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 import android.view.WindowManager;
 
 import com.assortedsolutions.streaming.Session;
 import com.assortedsolutions.streaming.SessionBuilder;
 import com.assortedsolutions.streaming.audio.AudioQuality;
-import com.assortedsolutions.streaming.gl.SurfaceView;
 import com.assortedsolutions.streaming.rtsp.RtspServer;
 import com.assortedsolutions.streaming.video.VideoQuality;
 
