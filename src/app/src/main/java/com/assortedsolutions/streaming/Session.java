@@ -26,13 +26,13 @@ import com.assortedsolutions.streaming.exceptions.CameraInUseException;
 import com.assortedsolutions.streaming.exceptions.ConfNotSupportedException;
 import com.assortedsolutions.streaming.exceptions.InvalidSurfaceException;
 import com.assortedsolutions.streaming.exceptions.StorageUnavailableException;
-import com.assortedsolutions.streaming.rtsp.RtspClient;
 import com.assortedsolutions.streaming.video.VideoStream;
 import android.hardware.Camera.CameraInfo;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
 import android.util.Log;
+import android.view.SurfaceView;
 
 /**
  * You should instantiate this class with the {@link SessionBuilder}.<br />
@@ -41,8 +41,6 @@ import android.util.Log;
  * It holds a {@link VideoStream} and a {@link AudioStream} together and provides
  * synchronous and asynchronous functions to start and stop those steams.
  * You should implement a callback interface {@link Callback} to receive notifications and error reports.<br />
- *
- * If you want to stream to a RTSP server, you will need an instance of this class and hand it to a {@link RtspClient}.
  *
  * If you don't use the RTSP protocol, you will still need to send a session description to the receiver
  * for him to be able to decode your audio/video streams. You can obtain this session description by calling
@@ -81,7 +79,7 @@ public class Session
     public final static int ERROR_INVALID_SURFACE = 0x04;
 
     /**
-     * The destination set with {@link Session#setDestination(String)} could not be resolved.
+     * The destination set with {@link Session#setDestination} could not be resolved.
      * May mean that the phone has no access to the internet, or that the DNS server could not
      * resolved the host name.
      */
@@ -140,7 +138,7 @@ public class Session
          * Called when the previw of the {@link VideoStream}
          * has correctly been started.
          * If an error occurs while starting the preview,
-         * {@link Callback#onSessionError(int, int, Exception)} will be
+         * {@link Callback#onSessionError} will be
          * called instead of {@link Callback#onPreviewStarted()}.
          */
         void onPreviewStarted();
@@ -149,7 +147,7 @@ public class Session
          * Called when the session has correctly been configured
          * after calling {@link Session#configure()}.
          * If an error occurs while configuring the {@link Session},
-         * {@link Callback#onSessionError(int, int, Exception)} will be
+         * {@link Callback#onSessionError} will be
          * called instead of  {@link Callback#onSessionConfigured()}.
          */
         void onSessionConfigured();
@@ -157,7 +155,7 @@ public class Session
         /**
          * Called when the streams of the session have correctly been started.
          * If an error occurs while starting the {@link Session},
-         * {@link Callback#onSessionError(int, int, Exception)} will be
+         * {@link Callback#onSessionError} will be
          * called instead of  {@link Callback#onSessionStarted()}.
          */
         void onSessionStarted();
@@ -292,7 +290,7 @@ public class Session
         return sessionDescription.toString();
     }
 
-    /** Returns the destination set with {@link #setDestination(String)}. */
+    /** Returns the destination set with {@link #setDestination}. */
     public String getDestination()
     {
         return mDestination;
@@ -350,8 +348,7 @@ public class Session
     /**
      * Does the same thing as {@link #configure()}, but in a synchronous manner. <br />
      * Throws exceptions in addition to calling a callback
-     * {@link Callback#onSessionError(int, int, Exception)} when
-     * an error occurs.
+     * {@link Callback#onSessionError} when an error occurs.
      **/
     public void syncConfigure() throws RuntimeException, IOException
     {
@@ -542,8 +539,8 @@ public class Session
 
     /**
      * Asynchronously starts the camera preview. <br />
-     * You should of course pass a {@link SurfaceView} to {@link #setSurfaceView(SurfaceView)}
-     * before calling this method. Otherwise, the {@link Callback#onSessionError(int, int, Exception)}
+     * You should of course pass a {@link SurfaceView} to {@link SessionBuilder#setSurfaceView}
+     * before calling this method. Otherwise, the {@link Callback#onSessionError}
      * callback will be called with {@link #ERROR_INVALID_SURFACE}.
      */
     public void startPreview()
