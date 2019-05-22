@@ -37,10 +37,7 @@ public class RtspService extends Service
     public final static String EXTRA_KEY_USERNAME = "USERNAME";
     public final static String EXTRA_KEY_PASSWORD = "PASSWORD";
 
-    protected boolean isEnabled = true;
     protected int requestListenerPort = 8086;
-
-    private boolean shouldRestart = false;
     private RequestListener requestListener;
 
     private String username = null;
@@ -57,9 +54,6 @@ public class RtspService extends Service
     {
         username = intent.getStringExtra(EXTRA_KEY_USERNAME);
         password = intent.getStringExtra(EXTRA_KEY_PASSWORD);
-
-        Log.e(TAG, "Username " + username);
-        Log.e(TAG, "Password " + password);
 
         start();
 
@@ -87,21 +81,15 @@ public class RtspService extends Service
      **************************************/
 
     /**
-     * Starts (or restart if needed, if for example the configuration
-     * of the server has been modified) the RTSP server.
+     * Starts the RTSP server.
      */
     public void start()
     {
-        if (!isEnabled || shouldRestart)
-        {
-            stop();
-        }
-
-        if (isEnabled && requestListener == null)
+        if (requestListener == null)
         {
             try
             {
-                Log.e(TAG, "Starting request listener with u: " + username + " and p: " + password);
+                Log.d(TAG, "Starting request listener with username:password " + username + ":" + password);
                 requestListener = new RequestListener(requestListenerPort, username, password);
             }
             catch (Exception e)
@@ -110,8 +98,6 @@ public class RtspService extends Service
                 requestListener = null;
             }
         }
-
-        shouldRestart = false;
     }
 
     /**
