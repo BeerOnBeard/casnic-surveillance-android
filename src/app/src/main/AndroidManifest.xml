@@ -26,7 +26,7 @@
             </intent-filter>
         </activity>
 
-        <service android:name="com.assortedsolutions.streaming.rtsp.RtspServer" />
+        <service android:name="com.assortedsolutions.streaming.rtsp.RtspService" />
     </application>
 
 </manifest>

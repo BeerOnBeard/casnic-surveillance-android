@@ -32,9 +32,9 @@ import android.util.Log;
  * The Session will start or stop streams according to what the client wants.
  *
  */
-public class RtspServer extends Service
+public class RtspService extends Service
 {
-    public final static String TAG = "RtspServer";
+    public final static String TAG = "RtspService";
 
     /** Port used by default. */
     public static final int DEFAULT_RTSP_PORT = 8086;
@@ -50,7 +50,7 @@ public class RtspServer extends Service
     private String mUsername;
     private String mPassword;
 
-    public RtspServer() {}
+    public RtspService() {}
 
     /****************************************
      *  android.Service implementation      *
@@ -81,9 +81,9 @@ public class RtspServer extends Service
     /** The Binder you obtain when a connection with the Service is established. */
     public class LocalBinder extends Binder
     {
-        public RtspServer getService()
+        public RtspService getService()
         {
-            return RtspServer.this;
+            return RtspService.this;
         }
     }
 

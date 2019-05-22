@@ -14,7 +14,7 @@ import android.view.WindowManager;
 import com.assortedsolutions.streaming.Session;
 import com.assortedsolutions.streaming.SessionBuilder;
 import com.assortedsolutions.streaming.audio.AudioQuality;
-import com.assortedsolutions.streaming.rtsp.RtspServer;
+import com.assortedsolutions.streaming.rtsp.RtspService;
 import com.assortedsolutions.streaming.video.VideoQuality;
 
 public class MainActivity extends Activity implements Session.Callback, SurfaceHolder.Callback {
@@ -43,7 +43,7 @@ public class MainActivity extends Activity implements Session.Callback, SurfaceH
                 .setVideoQuality(new VideoQuality(320, 240, 20, 500000))
                 .build();
 
-        Intent server = new Intent(this, RtspServer.class);
+        Intent server = new Intent(this, RtspService.class);
 
         Log.d(TAG, "starting RTSP Server service");
         startService(server);
