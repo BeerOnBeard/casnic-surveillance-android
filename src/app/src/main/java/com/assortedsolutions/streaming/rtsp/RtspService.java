@@ -20,7 +20,6 @@ package com.assortedsolutions.streaming.rtsp;
 
 import android.app.Service;
 import android.content.Intent;
-import android.os.Binder;
 import android.os.IBinder;
 import android.util.Log;
 
@@ -37,8 +36,6 @@ public class RtspService extends Service
     public final static String TAG = "RtspService";
     public final static String EXTRA_KEY_USERNAME = "USERNAME";
     public final static String EXTRA_KEY_PASSWORD = "PASSWORD";
-
-    private final IBinder mBinder = new LocalBinder();
 
     protected boolean isEnabled = true;
     protected int requestListenerPort = 8086;
@@ -70,32 +67,19 @@ public class RtspService extends Service
     }
 
     @Override
-    public void onCreate()
-    {
-        Log.d(TAG, "Creating...");
-    }
+    public void onCreate() {}
 
     @Override
     public void onDestroy()
     {
-        Log.d(TAG, "Destroying...");
-
         stop();
-    }
-
-    public class LocalBinder extends Binder
-    {
-        public RtspService getService()
-        {
-            return RtspService.this;
-        }
     }
 
     @Override
     public IBinder onBind(Intent intent)
     {
-        Log.d(TAG, "Intent bound");
-        return mBinder;
+        // Binding is not supported
+        return null;
     }
 
     /**************************************
