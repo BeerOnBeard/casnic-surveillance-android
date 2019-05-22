@@ -35,20 +35,19 @@ import android.util.Log;
 public class RtspService extends Service
 {
     public final static String TAG = "RtspService";
+    public final static String EXTRA_KEY_USERNAME = "USERNAME";
+    public final static String EXTRA_KEY_PASSWORD = "PASSWORD";
 
-    /** Port used by default. */
-    public static final int DEFAULT_RTSP_PORT = 8086;
+    private final IBinder mBinder = new LocalBinder();
 
     protected boolean isEnabled = true;
-    protected int requestListenerPort = DEFAULT_RTSP_PORT;
+    protected int requestListenerPort = 8086;
 
-    private RequestListener requestListener;
-    private final IBinder mBinder = new LocalBinder();
     private boolean shouldRestart = false;
+    private RequestListener requestListener;
 
-    /** Credentials for Basic Auth */
-    private String mUsername;
-    private String mPassword;
+    private String username = null;
+    private String password = null;
 
     public RtspService() {}
 
@@ -59,6 +58,14 @@ public class RtspService extends Service
     @Override
     public int onStartCommand(Intent intent, int flags, int startId)
     {
+        username = intent.getStringExtra(EXTRA_KEY_USERNAME);
+        password = intent.getStringExtra(EXTRA_KEY_PASSWORD);
+
+        Log.e(TAG, "Username " + username);
+        Log.e(TAG, "Password " + password);
+
+        start();
+
         return super.onStartCommand(intent, flags, startId);
     }
 
@@ -66,8 +73,6 @@ public class RtspService extends Service
     public void onCreate()
     {
         Log.d(TAG, "Creating...");
-
-        start();
     }
 
     @Override
@@ -78,7 +83,6 @@ public class RtspService extends Service
         stop();
     }
 
-    /** The Binder you obtain when a connection with the Service is established. */
     public class LocalBinder extends Binder
     {
         public RtspService getService()
@@ -99,16 +103,6 @@ public class RtspService extends Service
      **************************************/
 
     /**
-     * Set Basic authorization to access RTSP Stream
-     * @param username username
-     * @param password password
-     */
-    public void setAuthorization(String username, String password)
-    {
-        mUsername = username;
-        mPassword = password;
-    }
-    /**
      * Starts (or restart if needed, if for example the configuration
      * of the server has been modified) the RTSP server.
      */
@@ -123,7 +117,8 @@ public class RtspService extends Service
         {
             try
             {
-                requestListener = new RequestListener(requestListenerPort);
+                Log.e(TAG, "Starting request listener with u: " + username + " and p: " + password);
+                requestListener = new RequestListener(requestListenerPort, username, password);
             }
             catch (Exception e)
             {

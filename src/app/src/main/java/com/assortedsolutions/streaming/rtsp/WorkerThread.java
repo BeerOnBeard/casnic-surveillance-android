@@ -20,9 +20,8 @@ class WorkerThread extends Thread implements Runnable
     public static final String TAG = "WorkerThread";
     private static final String SERVER_NAME = "Casnic Surveillance RTSP Server";
 
-    // TODO: Expose these to allow auth
-    private static final String username = null;
-    private static final String password = null;
+    private final String username;
+    private final String password;
 
     private final Socket socket;
     private final OutputStream outputStream;
@@ -31,11 +30,15 @@ class WorkerThread extends Thread implements Runnable
     // Each client has an associated session
     private Session session;
 
-    WorkerThread(final Socket socket) throws IOException
+    WorkerThread(final Socket socket, final String username, final String password) throws IOException
     {
-        inputStreamReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-        outputStream = socket.getOutputStream();
+        this.username = username;
+        this.password = password;
+
         this.socket = socket;
+        outputStream = socket.getOutputStream();
+        inputStreamReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+
         session = new Session();
     }
 

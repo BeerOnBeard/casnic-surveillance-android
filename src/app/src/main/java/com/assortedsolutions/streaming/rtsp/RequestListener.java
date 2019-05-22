@@ -12,9 +12,14 @@ class RequestListener extends Thread implements Runnable
 {
     private static final String TAG = "RequestListener";
     private final ServerSocket serverSocket;
+    private final String username;
+    private final String password;
 
-    RequestListener(int port) throws IOException
+    RequestListener(int port, String username, String password) throws IOException
     {
+        this.username = username;
+        this.password = password;
+
         try
         {
             serverSocket = new ServerSocket(port);
@@ -37,7 +42,7 @@ class RequestListener extends Thread implements Runnable
             {
                 // accept() waits until connection is made and then returns a socket
                 Socket socket = serverSocket.accept();
-                new WorkerThread(socket).start();
+                new WorkerThread(socket, username, password).start();
             }
             catch (SocketException e)
             {
