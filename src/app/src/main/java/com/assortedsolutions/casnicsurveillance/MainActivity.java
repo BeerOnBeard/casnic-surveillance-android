@@ -5,9 +5,9 @@ import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.WindowManager;
 
@@ -17,12 +17,11 @@ import com.assortedsolutions.streaming.audio.AudioQuality;
 import com.assortedsolutions.streaming.rtsp.RtspService;
 import com.assortedsolutions.streaming.video.VideoQuality;
 
-public class MainActivity extends Activity implements Session.Callback, SurfaceHolder.Callback {
+public class MainActivity extends Activity implements Session.Callback {
 
     private final static String TAG = "MainActivity";
 
-    private SurfaceView mSurfaceView;
-    private Session mSession;
+    private SurfaceView surfaceView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,31 +30,29 @@ public class MainActivity extends Activity implements Session.Callback, SurfaceH
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
-        mSurfaceView = findViewById(R.id.surface);
+        surfaceView = findViewById(R.id.surface);
 
-        mSession = SessionBuilder.getInstance()
-                .setCallback(this)
-                .setSurfaceView(mSurfaceView)
-                .setContext(getApplicationContext())
-                .setAudioEncoder(SessionBuilder.AUDIO_AAC)
-                .setAudioQuality(new AudioQuality(16000, 32000))
-                .setVideoEncoder(SessionBuilder.VIDEO_H264)
-                .setVideoQuality(new VideoQuality(320, 240, 20, 500000))
-                .build();
+        SessionBuilder.getInstance()
+            .setCallback(this)
+            .setSurfaceView(surfaceView)
+            .setContext(getApplicationContext())
+            .setAudioEncoder(SessionBuilder.AUDIO_AAC)
+            .setAudioQuality(new AudioQuality(16000, 32000))
+            .setVideoEncoder(SessionBuilder.VIDEO_H264)
+            .setVideoQuality(new VideoQuality(320, 240, 20, 500000));
 
         Intent server = new Intent(this, RtspService.class);
 
         Log.d(TAG, "starting RTSP Server service");
         startService(server);
 
-        mSurfaceView.getHolder().addCallback(this);
+        surfaceView.setBackgroundColor(Color.argb(255, 255, 0, 0));
     }
 
     @Override
     public void onDestroy()
     {
         super.onDestroy();
-        mSession.release();
     }
 
     /************************************
@@ -86,43 +83,20 @@ public class MainActivity extends Activity implements Session.Callback, SurfaceH
     public void onSessionConfigured()
     {
         Log.d(TAG, "Session Configured");
-        mSession.start();
     }
 
     @Override
     public void onSessionStarted()
     {
         Log.d(TAG,"Session Started");
+        surfaceView.setBackgroundColor(Color.argb(0, 255, 0, 0));
     }
 
     @Override
     public void onSessionStopped()
     {
         Log.d(TAG,"Session Stopped");
-    }
-
-    /******************************************
-     * SurfaceHolder.Callback implementations *
-     ******************************************/
-
-    @Override
-    public void surfaceChanged(SurfaceHolder holder, int format, int width, int height)
-    {
-        Log.d(TAG, "Surface Changed");
-    }
-
-    @Override
-    public void surfaceCreated(SurfaceHolder holder)
-    {
-        Log.d(TAG, "Surface Created");
-        mSession.startPreview();
-    }
-
-    @Override
-    public void surfaceDestroyed(SurfaceHolder holder)
-    {
-        Log.d(TAG, "Surface Destroyed");
-        mSession.stop();
+        surfaceView.setBackgroundColor(Color.argb(255, 255, 0, 0));
     }
 
     /** Displays a popup to report the error to the user */
