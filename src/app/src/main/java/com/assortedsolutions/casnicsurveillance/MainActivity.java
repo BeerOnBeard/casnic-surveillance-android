@@ -28,7 +28,7 @@ public class MainActivity extends Activity implements Session.Callback, SurfaceH
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         mSurfaceView = findViewById(R.id.surface);
@@ -36,16 +36,12 @@ public class MainActivity extends Activity implements Session.Callback, SurfaceH
         mSession = SessionBuilder.getInstance()
                 .setCallback(this)
                 .setSurfaceView(mSurfaceView)
-                .setPreviewOrientation(90)
                 .setContext(getApplicationContext())
                 .setAudioEncoder(SessionBuilder.AUDIO_AAC)
                 .setAudioQuality(new AudioQuality(16000, 32000))
                 .setVideoEncoder(SessionBuilder.VIDEO_H264)
                 .setVideoQuality(new VideoQuality(320, 240, 20, 500000))
                 .build();
-
-        //mSession.setDestination("192.168.50.230");
-        //mSession.configure();
 
         Intent server = new Intent(this, RtspServer.class);
 
