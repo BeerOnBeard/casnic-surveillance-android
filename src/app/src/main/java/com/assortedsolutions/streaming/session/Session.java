@@ -16,11 +16,13 @@
  * limitations under the License.
  */
 
-package com.assortedsolutions.streaming;
+package com.assortedsolutions.streaming.session;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+
+import com.assortedsolutions.streaming.Stream;
 import com.assortedsolutions.streaming.audio.AudioStream;
 import com.assortedsolutions.streaming.exceptions.CameraInUseException;
 import com.assortedsolutions.streaming.exceptions.ConfNotSupportedException;

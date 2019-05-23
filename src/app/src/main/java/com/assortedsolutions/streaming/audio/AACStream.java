@@ -21,7 +21,7 @@ package com.assortedsolutions.streaming.audio;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
-import com.assortedsolutions.streaming.SessionBuilder;
+import com.assortedsolutions.streaming.session.SessionBuilder;
 import com.assortedsolutions.streaming.rtp.AACLATMPacketizer;
 import com.assortedsolutions.streaming.rtp.MediaCodecInputStream;
 import android.media.AudioFormat;

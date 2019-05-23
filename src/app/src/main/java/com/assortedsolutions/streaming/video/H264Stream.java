@@ -19,7 +19,7 @@
 package com.assortedsolutions.streaming.video;
 
 import java.io.IOException;
-import com.assortedsolutions.streaming.SessionBuilder;
+import com.assortedsolutions.streaming.session.SessionBuilder;
 import com.assortedsolutions.streaming.hw.EncoderDebugger;
 import com.assortedsolutions.streaming.mp4.MP4Config;
 import com.assortedsolutions.streaming.rtp.H264Packetizer;

@@ -18,10 +18,10 @@
 
 package com.assortedsolutions.streaming.rtsp;
 
-import static com.assortedsolutions.streaming.SessionBuilder.AUDIO_AAC;
-import static com.assortedsolutions.streaming.SessionBuilder.AUDIO_NONE;
-import static com.assortedsolutions.streaming.SessionBuilder.VIDEO_H264;
-import static com.assortedsolutions.streaming.SessionBuilder.VIDEO_NONE;
+import static com.assortedsolutions.streaming.session.SessionBuilder.AUDIO_AAC;
+import static com.assortedsolutions.streaming.session.SessionBuilder.AUDIO_NONE;
+import static com.assortedsolutions.streaming.session.SessionBuilder.VIDEO_H264;
+import static com.assortedsolutions.streaming.session.SessionBuilder.VIDEO_NONE;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -29,8 +29,8 @@ import java.net.URI;
 import java.net.URLEncoder;
 import java.net.UnknownHostException;
 import java.util.Set;
-import com.assortedsolutions.streaming.Session;
-import com.assortedsolutions.streaming.SessionBuilder;
+import com.assortedsolutions.streaming.session.Session;
+import com.assortedsolutions.streaming.session.SessionBuilder;
 import com.assortedsolutions.streaming.audio.AudioQuality;
 import com.assortedsolutions.streaming.video.VideoQuality;
 

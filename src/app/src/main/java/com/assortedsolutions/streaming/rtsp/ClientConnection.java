@@ -3,7 +3,7 @@ package com.assortedsolutions.streaming.rtsp;
 import android.util.Base64;
 import android.util.Log;
 
-import com.assortedsolutions.streaming.Session;
+import com.assortedsolutions.streaming.session.Session;
 
 import java.io.BufferedReader;
 import java.io.IOException;

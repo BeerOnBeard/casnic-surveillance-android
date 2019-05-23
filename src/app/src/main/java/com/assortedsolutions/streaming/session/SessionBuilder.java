@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package com.assortedsolutions.streaming;
+package com.assortedsolutions.streaming.session;
 
 import java.io.IOException;
 import com.assortedsolutions.streaming.audio.AACStream;
