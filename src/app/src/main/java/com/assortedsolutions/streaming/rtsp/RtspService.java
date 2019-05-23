@@ -34,8 +34,8 @@ import android.util.Log;
 public class RtspService extends Service
 {
     public final static String TAG = "RtspService";
-    public final static String EXTRA_KEY_USERNAME = "USERNAME";
-    public final static String EXTRA_KEY_PASSWORD = "PASSWORD";
+    public final static String EXTRA_KEY_USERNAME = "com.assortedsolutions.streaming.username";
+    public final static String EXTRA_KEY_PASSWORD = "com.assortedsolutions.streaming.password";
 
     protected int requestListenerPort = 8086;
     private RequestListener requestListener;
@@ -77,49 +77,55 @@ public class RtspService extends Service
     }
 
     /**************************************
-     *  Server methods                    *
+     *  Service methods                    *
      **************************************/
 
     /**
-     * Starts the RTSP server.
+     * Starts the service that listens for requests.
      */
     public void start()
     {
-        if (requestListener == null)
+        if (requestListener != null)
         {
-            try
-            {
-                Log.d(TAG, "Starting request listener with username:password " + username + ":" + password);
-                requestListener = new RequestListener(requestListenerPort, username, password);
-            }
-            catch (Exception e)
-            {
-                Log.e(TAG, "Creating request listener failed", e);
-                requestListener = null;
-            }
+            Log.i(TAG, "Start was called, but the service is already running");
+            return;
+        }
+
+        try
+        {
+            Log.d(TAG, "Starting request listener with username:password " + username + ":" + password);
+            requestListener = new RequestListener(requestListenerPort, username, password);
+        }
+        catch (Exception e)
+        {
+            Log.e(TAG, "Creating request listener failed", e);
+            requestListener = null;
         }
     }
 
     /**
-     * Stops the RTSP server but not the Android Service.
+     * Stops the service that listens for requests.
      * To stop the Android Service you need to call {@link android.content.Context#stopService(Intent)};
      */
     public void stop()
     {
-        if (requestListener != null)
+        if (requestListener == null)
         {
-            try
-            {
-                requestListener.kill();
-            }
-            catch (Exception e)
-            {
-                Log.e(TAG, "Stopping the session threw", e);
-            }
-            finally
-            {
-                requestListener = null;
-            }
+            Log.i(TAG, "Stop was called, but there is no running service");
+            return;
+        }
+
+        try
+        {
+            requestListener.kill();
+        }
+        catch (Exception e)
+        {
+            Log.e(TAG, "Stopping the session threw", e);
+        }
+        finally
+        {
+            requestListener = null;
         }
     }
 }

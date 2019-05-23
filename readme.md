@@ -14,4 +14,10 @@ Uses code from [fyhertz/libstreaming](https://github.com/fyhertz/libstreaming). 
 
 # Authorization
 
-Default values of `admin:changeit` are set in `MainActivity.java`.
+Default values of `admin:changeit` are set in `MainActivity.java`. Data is passed into the `RtspService` via extended intent data.
+
+```java
+Intent server = new Intent(this, RtspService.class);
+server.putExtra(RtspService.EXTRA_KEY_USERNAME, "admin");
+server.putExtra(RtspService.EXTRA_KEY_PASSWORD, "changeit");
+```
