@@ -93,7 +93,6 @@ public class RtspService extends Service
 
         try
         {
-            Log.d(TAG, "Starting request listener with username:password " + username + ":" + password);
             requestListener = new RequestListener(requestListenerPort, username, password);
         }
         catch (Exception e)

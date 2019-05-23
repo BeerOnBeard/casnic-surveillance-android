@@ -42,7 +42,7 @@ class RequestListener extends Thread implements Runnable
             {
                 // accept() waits until connection is made and then returns a socket
                 Socket socket = serverSocket.accept();
-                new WorkerThread(socket, username, password).start();
+                new ClientConnection(socket, username, password).start();
             }
             catch (SocketException e)
             {

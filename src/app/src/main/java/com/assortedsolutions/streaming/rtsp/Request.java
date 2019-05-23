@@ -15,17 +15,19 @@ class Request
     public static final String TAG = "Request";
 
     // Parse method & uri
-    public static final Pattern regexMethod = Pattern.compile("(\\w+) (\\S+) RTSP",Pattern.CASE_INSENSITIVE);
+    private static final Pattern regexMethod = Pattern.compile("(\\w+) (\\S+) RTSP",Pattern.CASE_INSENSITIVE);
 
     // Parse a request header
-    public static final Pattern regexHeader = Pattern.compile("(\\S+):(.+)",Pattern.CASE_INSENSITIVE);
+    private static final Pattern regexHeader = Pattern.compile("(\\S+):(.+)",Pattern.CASE_INSENSITIVE);
 
-    public String method;
-    public String uri;
-    public HashMap<String,String> headers = new HashMap<>();
+    String method;
+    String uri;
+    HashMap<String,String> headers = new HashMap<>();
 
-    /** Parse the method, uri & headers of a RTSP request */
-    public static Request parseRequest(BufferedReader input) throws IOException, IllegalStateException
+    /**
+     * Parse the method, uri and headers of a RTSP request.
+     */
+    static Request parse(BufferedReader input) throws IOException
     {
         Request request = new Request();
         String line;
@@ -54,8 +56,6 @@ class Request
         {
             throw new SocketException("Client disconnected");
         }
-
-        Log.i(TAG, request.method + " " + request.uri);
 
         return request;
     }
