@@ -31,6 +31,7 @@ public class MainActivity extends Activity implements Session.Callback {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         surfaceView = findViewById(R.id.surface);
+        toggleSurfaceMask(true);
 
         SessionBuilder.getInstance()
             .setCallback(this)
@@ -47,8 +48,6 @@ public class MainActivity extends Activity implements Session.Callback {
 
         Log.d(TAG, "starting RTSP Server service");
         startService(server);
-
-        surfaceView.setBackgroundColor(Color.argb(255, 255, 0, 0));
     }
 
     @Override
@@ -70,7 +69,8 @@ public class MainActivity extends Activity implements Session.Callback {
     @Override
     public void onSessionError(int message, int streamType, Exception e)
     {
-        if (e != null) {
+        if (e != null)
+        {
             logError(e.getMessage());
         }
     }
@@ -91,14 +91,30 @@ public class MainActivity extends Activity implements Session.Callback {
     public void onSessionStarted()
     {
         Log.d(TAG,"Session Started");
-        surfaceView.setBackgroundColor(Color.argb(0, 255, 0, 0));
+        toggleSurfaceMask(false);
     }
 
     @Override
     public void onSessionStopped()
     {
         Log.d(TAG,"Session Stopped");
-        surfaceView.setBackgroundColor(Color.argb(255, 255, 0, 0));
+        toggleSurfaceMask(true);
+    }
+
+    /**
+     * Toggles a red surface masks that tells the user that no one is streaming.
+     * @param on If true, mask is applied. If false, mask is removed.
+     */
+    private void toggleSurfaceMask(boolean on)
+    {
+        if(on)
+        {
+            surfaceView.setBackgroundColor(Color.argb(255, 255, 0, 0));
+        }
+        else
+        {
+            surfaceView.setBackgroundColor(Color.argb(0, 0, 0, 0));
+        }
     }
 
     /** Displays a popup to report the error to the user */
