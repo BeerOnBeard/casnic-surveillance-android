@@ -12,6 +12,8 @@ import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -82,7 +84,7 @@ class ClientConnection extends Thread implements Runnable
                 catch (Exception e)
                 {
                     Log.e(TAG, "Processing the request threw", e);
-                    response = new Response(request);
+                    response = new Response(request, Response.STATUS_INTERNAL_SERVER_ERROR);
                 }
             }
 
@@ -117,10 +119,9 @@ class ClientConnection extends Thread implements Runnable
     {
         if(!isAuthorized(request) && !request.method.equalsIgnoreCase("OPTIONS"))
         {
-            return new Response(
-                request,
-                Response.STATUS_UNAUTHORIZED,
-                "WWW-Authenticate: Basic realm=\"" + SERVER_NAME + "\"\r\n");
+            Map<String, String> attributes = new HashMap<>();
+            attributes.put("WWW-Authenticate", "Basic realm=\"" + SERVER_NAME + "\"");
+            return new Response(request, Response.STATUS_UNAUTHORIZED, attributes);
         }
 
         switch(request.method.toUpperCase())
@@ -131,10 +132,9 @@ class ClientConnection extends Thread implements Runnable
 
             case "OPTIONS":
                 Log.v(TAG, "Request options");
-                return new Response(
-                    request,
-                    Response.STATUS_OK,
-                    "Public: DESCRIBE,SETUP,TEARDOWN,PLAY,PAUSE\r\n");
+                Map<String, String> attributes = new HashMap<>();
+                attributes.put("Public", "DESCRIBE,SETUP,TEARDOWN,PLAY,PAUSE");
+                return new Response(request, Response.STATUS_OK, attributes);
 
             case "SETUP":
                 Log.v(TAG, "Request setup");
@@ -159,8 +159,8 @@ class ClientConnection extends Thread implements Runnable
     }
 
     /**
-     * Check if the request is authorized
-     * @param request
+     * Check if the request is authorized.
+     * @param request The request to authorize
      * @return true or false
      */
     private boolean isAuthorized(Request request)
@@ -173,9 +173,9 @@ class ClientConnection extends Thread implements Runnable
 
         if(auth != null && !auth.isEmpty())
         {
-            String received = auth.substring(auth.lastIndexOf(" ")+1);
+            String received = auth.substring(auth.lastIndexOf(" ") + 1);
             String local = username + ":" + password;
-            String localEncoded = Base64.encodeToString(local.getBytes(),Base64.NO_WRAP);
+            String localEncoded = Base64.encodeToString(local.getBytes(), Base64.NO_WRAP);
             if(localEncoded.equals(received))
             {
                 return true;
@@ -198,15 +198,12 @@ class ClientConnection extends Thread implements Runnable
         session.syncConfigure();
 
         String content = session.getSessionDescription();
-        String attributes =
-            "Content-Base: " + socket.getLocalAddress().getHostAddress() + ":" + socket.getLocalPort() + "/\r\n" +
-            "Content-Type: application/sdp\r\n";
 
-        return new Response(
-            request,
-            Response.STATUS_OK,
-            attributes,
-            content);
+        Map<String, String> attributes = new HashMap<>();
+        attributes.put("Content-Base", socket.getLocalAddress().getHostAddress() + ":" + socket.getLocalPort());
+        attributes.put("Content-Type", "application/sdp");
+
+        return new Response(request, Response.STATUS_OK, attributes, content);
     }
 
     private Response setup(Request request) throws IOException
@@ -264,39 +261,43 @@ class ClientConnection extends Thread implements Runnable
         session.getTrack(trackId).setDestinationPorts(p1, p2);
         session.syncStart(trackId);
 
-        String attributes = "Transport: RTP/AVP/UDP;" + (InetAddress.getByName(destination).isMulticastAddress() ? "multicast" : "unicast") +
-                ";destination=" + session.getDestination() +
-                ";client_port=" + p1 + "-" + p2 +
-                ";server_port=" + src[0] + "-" + src[1] +
-                ";ssrc=" + Integer.toHexString(ssrc) +
-                ";mode=play\r\n" +
-                "Session: " + "1185d20035702ca\r\n" +
-                "Cache-Control: no-cache\r\n";
+        Map<String, String> attributes = new HashMap<>();
 
-        return new Response(
-                request,
-                Response.STATUS_OK,
-                attributes);
+        String transport =
+            "RTP/AVP/UDP;" + (InetAddress.getByName(destination).isMulticastAddress() ? "multicast" : "unicast") +
+            ";destination=" + session.getDestination() +
+            ";client_port=" + p1 + "-" + p2 +
+            ";server_port=" + src[0] + "-" + src[1] +
+            ";ssrc=" + Integer.toHexString(ssrc) +
+            ";mode=play";
+
+        attributes.put("Transport", transport);
+        attributes.put("Session", "1185d20035702ca"); // TODO: Session is hard-coded?
+        attributes.put("Cache-Control", "no-cache");
+
+        return new Response(request, Response.STATUS_OK, attributes);
     }
 
     private Response play(Request request)
     {
-        String attributes = "RTP-Info: ";
+        String rtpInfo = "";
         if (session.trackExists(0))
         {
-            attributes += "url=rtsp://" + socket.getLocalAddress().getHostAddress() + ":" + socket.getLocalPort() + "/trackID=0;seq=0,";
+            rtpInfo += "url=rtsp://" + socket.getLocalAddress().getHostAddress() + ":" + socket.getLocalPort() + "/trackID=0;seq=0,";
         }
 
         if (session.trackExists(1))
         {
-            attributes += "url=rtsp://" + socket.getLocalAddress().getHostAddress() + ":" + socket.getLocalPort() + "/trackID=1;seq=0,";
+            rtpInfo += "url=rtsp://" + socket.getLocalAddress().getHostAddress() + ":" + socket.getLocalPort() + "/trackID=1;seq=0,";
         }
 
-        attributes = attributes.substring(0, attributes.length() - 1) + "\r\nSession: 1185d20035702ca\r\n";
+        // remove trailing comma
+        rtpInfo = rtpInfo.substring(0, rtpInfo.length() - 1);
 
-        return new Response(
-                request,
-                Response.STATUS_OK,
-                attributes);
+        Map<String, String> attributes = new HashMap<>();
+        attributes.put("RTP-Info", rtpInfo);
+        attributes.put("Session", "1185d20035702ca");
+
+        return new Response(request, Response.STATUS_OK, attributes);
     }
 }

@@ -2,6 +2,9 @@ package com.assortedsolutions.streaming.rtsp;
 
 import android.util.Log;
 
+import java.util.HashMap;
+import java.util.Map;
+
 class Response
 {
     public static final String TAG = "Response";
@@ -17,8 +20,8 @@ class Response
 
     private final String status;
     private final Request request;
+    private final Map<String, String> attributes;
     private final String content;
-    private final String attributes;
 
     Response(String status)
     {
@@ -26,52 +29,61 @@ class Response
         this(null, status);
     }
 
-    Response(Request request)
-    {
-        this(request, STATUS_INTERNAL_SERVER_ERROR);
-    }
-
     Response(Request request, String status)
     {
         // default attributes to empty string
-        this(request, status, "");
+        this(request, status, new HashMap<String, String>());
     }
 
-    Response(Request request, String status, String attributes)
+    Response(Request request, String status, Map<String, String> attributes)
     {
         // default content to empty string
         this(request, status, attributes, "");
     }
 
-    Response(Request request, String status, String attributes, String content)
+    Response(Request request, String status, Map<String, String> attributes, String content)
     {
         this.request = request;
         this.status = status;
         this.attributes = attributes;
         this.content = content;
+
+        this.attributes.put("Server", SERVER_NAME);
+        this.attributes.put("Content-Length", String.valueOf(this.content.length()));
+
+        int sequenceNumber = getSequenceNumber(this.request);
+        if (sequenceNumber >= 0)
+        {
+            this.attributes.put("CSeq", String.valueOf(sequenceNumber));
+        }
     }
 
-    public byte[] getBytes()
+    byte[] getBytes()
     {
-        int seqid = -1;
+        StringBuilder responseBuilder = new StringBuilder("RTSP/1.0 " + status + "\r\n");
+        for (String key : attributes.keySet())
+        {
+            responseBuilder.append(key).append(": ").append(attributes.get(key)).append("\r\n");
+        }
 
+        responseBuilder.append("\r\n").append(content).append("\r\n");
+
+        String response = responseBuilder.toString();
+        Log.d(TAG, response.replace("\r", ""));
+        return response.getBytes();
+    }
+
+    private static int getSequenceNumber(Request request)
+    {
         try
         {
-            seqid = Integer.parseInt(request.headers.get("cseq").trim());
+            return Integer.parseInt(request.headers.get("cseq").trim());
         }
         catch (Exception e)
         {
             Log.e(TAG,"Error parsing CSeq", e);
         }
 
-        String response = "RTSP/1.0 " + status + "\r\n" +
-            "Server: " + SERVER_NAME + "\r\n" +
-            (seqid >= 0 ? ("Cseq: " + seqid + "\r\n") : "") +
-            "Content-Length: " + content.length() + "\r\n" +
-            attributes + "\r\n" +
-            content;
-
-        Log.d(TAG, response.replace("\r", ""));
-        return response.getBytes();
+        return -1;
     }
 }
