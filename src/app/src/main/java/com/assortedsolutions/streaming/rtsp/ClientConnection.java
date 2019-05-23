@@ -23,6 +23,8 @@ class ClientConnection extends Thread implements Runnable
     private static final String SERVER_NAME = "Casnic Surveillance RTSP Server";
 
     private final String remoteHostAddress;
+    private final String localHostAddress;
+    private final int localHostPort;
     private final String username;
     private final String password;
 
@@ -40,6 +42,8 @@ class ClientConnection extends Thread implements Runnable
         this.socket = socket;
 
         remoteHostAddress = socket.getInetAddress().getHostAddress();
+        localHostAddress = socket.getLocalAddress().getHostAddress();
+        localHostPort = socket.getLocalPort();
         outputStream = socket.getOutputStream();
         inputStreamReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
@@ -189,10 +193,10 @@ class ClientConnection extends Thread implements Runnable
     {
         // Parse the requested URI and configure the session
         session = UriParser.parse(request.uri);
-        session.setOrigin(socket.getLocalAddress().getHostAddress());
+        session.setOrigin(localHostAddress);
         if (session.getDestination() == null)
         {
-            session.setDestination(socket.getInetAddress().getHostAddress());
+            session.setDestination(remoteHostAddress);
         }
 
         session.syncConfigure();
@@ -200,7 +204,7 @@ class ClientConnection extends Thread implements Runnable
         String content = session.getSessionDescription();
 
         Map<String, String> attributes = new HashMap<>();
-        attributes.put("Content-Base", socket.getLocalAddress().getHostAddress() + ":" + socket.getLocalPort());
+        attributes.put("Content-Base", localHostAddress + ":" + localHostPort);
         attributes.put("Content-Type", "application/sdp");
 
         return new Response(request, Response.STATUS_OK, attributes, content);
@@ -283,12 +287,12 @@ class ClientConnection extends Thread implements Runnable
         String rtpInfo = "";
         if (session.trackExists(0))
         {
-            rtpInfo += "url=rtsp://" + socket.getLocalAddress().getHostAddress() + ":" + socket.getLocalPort() + "/trackID=0;seq=0,";
+            rtpInfo += "url=rtsp://" + localHostAddress + ":" + localHostPort + "/trackID=0;seq=0,";
         }
 
         if (session.trackExists(1))
         {
-            rtpInfo += "url=rtsp://" + socket.getLocalAddress().getHostAddress() + ":" + socket.getLocalPort() + "/trackID=1;seq=0,";
+            rtpInfo += "url=rtsp://" + localHostAddress + ":" + localHostPort + "/trackID=1;seq=0,";
         }
 
         // remove trailing comma
