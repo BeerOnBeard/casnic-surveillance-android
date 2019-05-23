@@ -62,7 +62,7 @@ public class SessionBuilder
     private SurfaceView mSurfaceView = null;
     private String mOrigin = null;
     private String mDestination = null;
-    private Session.Callback mCallback = null;
+    private Callback mCallback = null;
 
     // Removes the default public constructor
     private SessionBuilder() {}
@@ -234,7 +234,7 @@ public class SessionBuilder
         return this;
     }
 
-    public SessionBuilder setCallback(Session.Callback callback)
+    public SessionBuilder setCallback(Callback callback)
     {
         mCallback = callback;
         return this;

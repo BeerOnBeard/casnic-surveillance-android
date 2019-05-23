@@ -11,13 +11,13 @@ import android.util.Log;
 import android.view.SurfaceView;
 import android.view.WindowManager;
 
-import com.assortedsolutions.streaming.session.Session;
+import com.assortedsolutions.streaming.session.Callback;
 import com.assortedsolutions.streaming.session.SessionBuilder;
 import com.assortedsolutions.streaming.audio.AudioQuality;
 import com.assortedsolutions.streaming.rtsp.RtspService;
 import com.assortedsolutions.streaming.video.VideoQuality;
 
-public class MainActivity extends Activity implements Session.Callback {
+public class MainActivity extends Activity implements Callback {
 
     private final static String TAG = "MainActivity";
 
