@@ -296,7 +296,7 @@ class ClientConnection extends Thread implements Runnable
 
         Map<String, String> attributes = new HashMap<>();
         attributes.put("RTP-Info", rtpInfo);
-        attributes.put("Session", "1185d20035702ca");
+        attributes.put("Session", "1185d20035702ca"); // TODO: Session is hard-coded?
 
         return new Response(request, Response.STATUS_OK, attributes);
     }
