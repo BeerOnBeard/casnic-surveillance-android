@@ -1,0 +1,99 @@
+
+ClientConnection: Connection from 192.168.50.230
+
+--------------------------------------------
+
+Request: 
+    OPTIONS rtsp://192.168.50.54:8086 RTSP/1.0
+    CSeq: 2
+    User-Agent: LibVLC/3.0.4 (LIVE555 Streaming Media v2018.09.18)
+
+Response: RTSP/1.0 200 OK
+    CSeq: 2
+    Content-Length: 0
+    Server: Casnic Surveillance RTSP Server
+    Public: DESCRIBE,SETUP,TEARDOWN,PLAY,PAUSE
+
+--------------------------------------------
+
+Request: 
+    DESCRIBE rtsp://192.168.50.54:8086 RTSP/1.0
+    CSeq: 3
+    User-Agent: LibVLC/3.0.4 (LIVE555 Streaming Media v2018.09.18)
+    Accept: application/sdp
+
+Response: RTSP/1.0 401 Unauthorized
+    CSeq: 3
+    Content-Length: 0
+    Server: Casnic Surveillance RTSP Server
+    WWW-Authenticate: Basic realm="Casnic Surveillance RTSP Server"
+
+--------------------------------------------
+
+Request:
+    DESCRIBE rtsp://192.168.50.54:8086 RTSP/1.0
+    CSeq: 4
+    Authorization: Basic YWRtaW46Y2hhbmdlaXQ=
+    User-Agent: LibVLC/3.0.4 (LIVE555 Streaming Media v2018.09.18)
+    Accept: application/sdp
+
+Response: RTSP/1.0 200 OK
+    CSeq: 5
+    Cache-Control: no-cache
+    Content-Length: 0
+    Server: Casnic Surveillance RTSP Server
+    Session: 1185d20035702ca
+    Transport: RTP/AVP/UDP;unicast;destination=192.168.50.230;client_port=5004-5005;server_port=37130-42913;ssrc=8630aa1f;mode=play
+
+--------------------------------------------
+
+Request:
+    SETUP 192.168.50.54:8086/trackID=1 RTSP/1.0
+    CSeq: 6
+    Authorization: Basic YWRtaW46Y2hhbmdlaXQ=
+    User-Agent: LibVLC/3.0.4 (LIVE555 Streaming Media v2018.09.18)
+    Transport: RTP/AVP;unicast;client_port=5006-5007
+    Session: 1185d20035702ca
+
+Response: RTSP/1.0 200 OK
+    CSeq: 6
+    Cache-Control: no-cache
+    Content-Length: 0
+    Server: Casnic Surveillance RTSP Server
+    Session: 1185d20035702ca
+    Transport: RTP/AVP/UDP;unicast;destination=192.168.50.230;client_port=5006-5007;server_port=41520-47500;ssrc=1d36cca7;mode=play
+
+--------------------------------------------
+
+Request:
+    PLAY 192.168.50.54:8086 RTSP/1.0
+    CSeq: 7
+    Authorization: Basic YWRtaW46Y2hhbmdlaXQ=
+    User-Agent: LibVLC/3.0.4 (LIVE555 Streaming Media v2018.09.18)
+    Session: 1185d20035702ca
+    Range: npt=0.000-
+
+Response: RTSP/1.0 200 OK
+    CSeq: 7
+    RTP-Info: url=rtsp://192.168.50.54:8086/trackID=0;seq=0,url=rtsp://192.168.50.54:8086/trackID=1;seq=0
+    Content-Length: 0
+    Server: Casnic Surveillance RTSP Server
+    Session: 1185d20035702ca
+
+--------------------------------------------
+
+Request:
+    TEARDOWN 192.168.50.54:8086 RTSP/1.0
+    CSeq: 8
+    Authorization: Basic YWRtaW46Y2hhbmdlaXQ=
+    User-Agent: LibVLC/3.0.4 (LIVE555 Streaming Media v2018.09.18)
+    Session: 1185d20035702ca
+
+D/Response: RTSP/1.0 200 OK
+    CSeq: 8
+    Content-Length: 0
+    Server: Casnic Surveillance RTSP Server
+
+--------------------------------------------
+
+I/ClientConnection: Client at 192.168.50.230 disconnected
