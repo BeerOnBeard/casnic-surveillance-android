@@ -4,6 +4,7 @@ import android.util.Base64;
 import android.util.Log;
 
 import com.assortedsolutions.streaming.session.Session;
+import com.assortedsolutions.streaming.session.SessionBuilder;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -46,8 +47,6 @@ class ClientConnection extends Thread implements Runnable
         localHostPort = socket.getLocalPort();
         outputStream = socket.getOutputStream();
         inputStreamReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
-        session = new Session();
     }
 
     public void run()
@@ -162,37 +161,30 @@ class ClientConnection extends Thread implements Runnable
         }
     }
 
-    /**
-     * Check if the request is authorized.
-     * @param request The request to authorize
-     * @return true or false
-     */
     private boolean isAuthorized(Request request)
     {
-        String auth = request.headers.get("authorization");
         if(username == null || password == null || username.isEmpty())
         {
+            Log.v(TAG, "Skipping authorization");
             return true;
         }
 
-        if(auth != null && !auth.isEmpty())
+        String auth = request.headers.get("authorization");
+        if (auth == null || auth.isEmpty())
         {
-            String received = auth.substring(auth.lastIndexOf(" ") + 1);
-            String local = username + ":" + password;
-            String localEncoded = Base64.encodeToString(local.getBytes(), Base64.NO_WRAP);
-            if(localEncoded.equals(received))
-            {
-                return true;
-            }
+            return false;
         }
 
-        return false;
+        String received = auth.substring(auth.lastIndexOf(" ") + 1);
+        String local = username + ":" + password;
+        String localEncoded = Base64.encodeToString(local.getBytes(), Base64.NO_WRAP);
+
+        return localEncoded.equals(received);
     }
 
     private Response describe(Request request) throws IOException
     {
-        // Parse the requested URI and configure the session
-        session = UriParser.parse(request.uri);
+        session = SessionBuilder.getInstance().build();
         session.setOrigin(localHostAddress);
         if (session.getDestination() == null)
         {

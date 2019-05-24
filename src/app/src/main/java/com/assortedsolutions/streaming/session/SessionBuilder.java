@@ -38,13 +38,7 @@ public class SessionBuilder
     public final static String TAG = "SessionBuilder";
 
     /** Can be used with {@link #setVideoEncoder}. */
-    public final static int VIDEO_NONE = 0;
-
-    /** Can be used with {@link #setVideoEncoder}. */
     public final static int VIDEO_H264 = 1;
-
-    /** Can be used with {@link #setAudioEncoder}. */
-    public final static int AUDIO_NONE = 0;
 
     /** Can be used with {@link #setAudioEncoder}. */
     public final static int AUDIO_AAC = 5;
@@ -52,7 +46,6 @@ public class SessionBuilder
     // Default configuration
     private VideoQuality videoQuality = VideoQuality.DEFAULT_VIDEO_QUALITY;
     private AudioQuality audioQuality = AudioQuality.DEFAULT_AUDIO_QUALITY;
-    private Context context;
     private int videoEncoder = VIDEO_H264;
     private int audioEncoder = AUDIO_AAC;
     private int camera = CameraInfo.CAMERA_FACING_BACK;
@@ -63,6 +56,7 @@ public class SessionBuilder
     private String origin = null;
     private String destination = null;
     private Callback callback = null;
+    private Context context;
 
     // Removes the default public constructor
     private SessionBuilder() {}
@@ -76,7 +70,6 @@ public class SessionBuilder
      */
     public final static SessionBuilder getInstance()
     {
-        // TODO: Does this need to be a singleton if there is a .clone() method?
         if (builder == null)
         {
             synchronized (SessionBuilder.class)
@@ -102,20 +95,6 @@ public class SessionBuilder
     public SessionBuilder setContext(Context context)
     {
         this.context = context;
-        return this;
-    }
-
-    /** Sets the destination of the session. */
-    public SessionBuilder setDestination(String destination)
-    {
-        this.destination = destination;
-        return this;
-    }
-
-    /** Sets the origin of the session. It appears in the SDP of the session. */
-    public SessionBuilder setOrigin(String origin)
-    {
-        this.origin = origin;
         return this;
     }
 
@@ -147,40 +126,10 @@ public class SessionBuilder
         return this;
     }
 
-    public SessionBuilder setFlashEnabled(boolean enabled)
-    {
-        isFlashEnabled = enabled;
-        return this;
-    }
-
-    public SessionBuilder setCamera(int camera)
-    {
-        this.camera = camera;
-        return this;
-    }
-
-    public SessionBuilder setTimeToLive(int ttl)
-    {
-        timeToLive = ttl;
-        return this;
-    }
-
-    /**
-     * Sets the SurfaceView required to preview the video stream.
-     **/
+    /** Sets the SurfaceView required to preview the video stream. */
     public SessionBuilder setSurfaceView(SurfaceView surfaceView)
     {
         this.surfaceView = surfaceView;
-        return this;
-    }
-
-    /**
-     * Sets the orientation of the preview.
-     * @param orientation The orientation of the preview
-     */
-    public SessionBuilder setPreviewOrientation(int orientation)
-    {
-        this.orientation = orientation;
         return this;
     }
 
@@ -222,6 +171,7 @@ public class SessionBuilder
                 H264Stream stream = new H264Stream(camera);
                 if (context != null)
                 {
+                    // TODO: Get rid of preferences? Try not setting context
                     stream.setPreferences(PreferenceManager.getDefaultSharedPreferences(context));
                 }
 
@@ -247,37 +197,5 @@ public class SessionBuilder
         }
 
         return session;
-    }
-
-    /** Returns the audio encoder set with {@link #setAudioEncoder(int)}. */
-    public int getAudioEncoder()
-    {
-        return audioEncoder;
-    }
-
-    /** Returns the video encoder set with {@link #setVideoEncoder(int)}. */
-    public int getVideoEncoder()
-    {
-        return videoEncoder;
-    }
-
-    /** Returns a new {@link SessionBuilder} with the same configuration. */
-    public SessionBuilder clone()
-    {
-        // TODO: This seems to break the singleton pattern noted at the top. Why?
-        return new SessionBuilder()
-                .setDestination(destination)
-                .setOrigin(origin)
-                .setSurfaceView(surfaceView)
-                .setPreviewOrientation(orientation)
-                .setVideoQuality(videoQuality)
-                .setVideoEncoder(videoEncoder)
-                .setFlashEnabled(isFlashEnabled)
-                .setCamera(camera)
-                .setTimeToLive(timeToLive)
-                .setAudioEncoder(audioEncoder)
-                .setAudioQuality(audioQuality)
-                .setContext(context)
-                .setCallback(callback);
     }
 }
