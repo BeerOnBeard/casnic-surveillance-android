@@ -51,7 +51,6 @@ public class SessionBuilder
     private int camera = CameraInfo.CAMERA_FACING_BACK;
     private int timeToLive = 64;
     private int orientation = 0;
-    private boolean isFlashEnabled = false;
     private SurfaceView surfaceView = null;
     private String origin = null;
     private String destination = null;
@@ -182,7 +181,6 @@ public class SessionBuilder
         if (session.getVideoTrack() != null)
         {
             VideoStream video = session.getVideoTrack();
-            video.setFlashState(isFlashEnabled);
             video.setVideoQuality(videoQuality);
             video.setSurfaceView(surfaceView);
             video.setPreviewOrientation(orientation);

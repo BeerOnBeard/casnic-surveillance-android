@@ -63,7 +63,6 @@ public abstract class VideoStream extends MediaStream
     protected Looper mCameraLooper;
 
     protected boolean mCameraOpenedManually = true;
-    protected boolean mFlashEnabled = false;
     protected boolean mSurfaceReady = false;
     protected boolean mUnlocked = false;
     protected boolean mPreviewStarted = false;
@@ -121,7 +120,6 @@ public abstract class VideoStream extends MediaStream
         mCameraId = (mCameraId == CameraInfo.CAMERA_FACING_BACK) ? CameraInfo.CAMERA_FACING_FRONT : CameraInfo.CAMERA_FACING_BACK;
         setCamera(mCameraId);
         stopPreview();
-        mFlashEnabled = false;
 
         if (previewing)
         {
@@ -185,68 +183,6 @@ public abstract class VideoStream extends MediaStream
             mSurfaceView.getHolder().addCallback(mSurfaceHolderCallback);
             mSurfaceReady = true;
         }
-    }
-
-    /** Turns the LED on or off if phone has one. */
-    public synchronized void setFlashState(boolean state)
-    {
-        // If the camera has not been opened, we set the flag to enable when the camera is opened
-        if (mCamera == null)
-        {
-            mFlashEnabled = state;
-            return;
-        }
-
-        if (mStreaming)
-        {
-            lockCamera();
-        }
-
-        Parameters parameters = mCamera.getParameters();
-
-        // We test if the phone has a flash
-        if (parameters.getFlashMode() == null)
-        {
-            // The phone has no flash or the chosen camera can not toggle the flash
-            throw new RuntimeException("Cannot turn the flash on");
-        }
-        else
-        {
-            parameters.setFlashMode(state ? Parameters.FLASH_MODE_TORCH : Parameters.FLASH_MODE_OFF);
-
-            try
-            {
-                mCamera.setParameters(parameters);
-                mFlashEnabled = state;
-            }
-            catch (RuntimeException e)
-            {
-                mFlashEnabled = false;
-                throw new RuntimeException("Cannot turn the flash on", e);
-            }
-            finally
-            {
-                if (mStreaming)
-                {
-                    unlockCamera();
-                }
-            }
-        }
-    }
-
-    /**
-     * Toggles the LED of the phone if it has one.
-     * You can get the current state of the flash with {@link VideoStream#getFlashState()}.
-     */
-    public synchronized void toggleFlash()
-    {
-        setFlashState(!mFlashEnabled);
-    }
-
-    /** Indicates whether or not the flash of the phone is on. */
-    public boolean getFlashState()
-    {
-        return mFlashEnabled;
     }
 
     /**
@@ -541,14 +477,8 @@ public abstract class VideoStream extends MediaStream
 
             try
             {
-                // If the phone has a flash, we turn it on/off according to mFlashEnabled
-                // setRecordingHint(true) is a very nice optimization if you plane to only use the Camera for recording
+                // setRecordingHint(true) is a very nice optimization if you plan to only use the Camera for recording
                 Parameters parameters = mCamera.getParameters();
-                if (parameters.getFlashMode() != null)
-                {
-                    parameters.setFlashMode(mFlashEnabled?Parameters.FLASH_MODE_TORCH:Parameters.FLASH_MODE_OFF);
-                }
-
                 parameters.setRecordingHint(true);
                 mCamera.setParameters(parameters);
                 mCamera.setDisplayOrientation(mOrientation);
