@@ -21,10 +21,8 @@ package com.assortedsolutions.streaming.session;
 import java.io.IOException;
 import com.assortedsolutions.streaming.audio.AACStream;
 import com.assortedsolutions.streaming.audio.AudioQuality;
-import com.assortedsolutions.streaming.audio.AudioStream;
 import com.assortedsolutions.streaming.video.H264Stream;
 import com.assortedsolutions.streaming.video.VideoQuality;
-import com.assortedsolutions.streaming.video.VideoStream;
 import android.content.Context;
 import android.hardware.Camera.CameraInfo;
 import android.preference.PreferenceManager;
@@ -33,21 +31,13 @@ import android.view.SurfaceView;
 /**
  * Call {@link #getInstance()} to get access to the SessionBuilder.
  */
-public class SessionBuilder
+public final class SessionBuilder
 {
     public final static String TAG = "SessionBuilder";
-
-    /** Can be used with {@link #setVideoEncoder}. */
-    public final static int VIDEO_H264 = 1;
-
-    /** Can be used with {@link #setAudioEncoder}. */
-    public final static int AUDIO_AAC = 5;
 
     // Default configuration
     private VideoQuality videoQuality = VideoQuality.DEFAULT_VIDEO_QUALITY;
     private AudioQuality audioQuality = AudioQuality.DEFAULT_AUDIO_QUALITY;
-    private int videoEncoder = VIDEO_H264;
-    private int audioEncoder = AUDIO_AAC;
     private int camera = CameraInfo.CAMERA_FACING_BACK;
     private int timeToLive = 64;
     private int orientation = 0;
@@ -61,25 +51,14 @@ public class SessionBuilder
     private SessionBuilder() {}
 
     // The SessionManager implements the singleton pattern
-    private static volatile SessionBuilder builder = null;
+    private static SessionBuilder builder = new SessionBuilder();
 
     /**
      * Returns a reference to the {@link SessionBuilder}.
      * @return The reference to the {@link SessionBuilder}
      */
-    public final static SessionBuilder getInstance()
+    public static SessionBuilder getInstance()
     {
-        if (builder == null)
-        {
-            synchronized (SessionBuilder.class)
-            {
-                if (builder == null)
-                {
-                    SessionBuilder.builder = new SessionBuilder();
-                }
-            }
-        }
-
         return builder;
     }
 
@@ -104,24 +83,10 @@ public class SessionBuilder
         return this;
     }
 
-    /** Sets the audio encoder. */
-    public SessionBuilder setAudioEncoder(int encoder)
-    {
-        audioEncoder = encoder;
-        return this;
-    }
-
     /** Sets the audio quality. */
     public SessionBuilder setAudioQuality(AudioQuality quality)
     {
         audioQuality = quality.clone();
-        return this;
-    }
-
-    /** Sets the default video encoder. */
-    public SessionBuilder setVideoEncoder(int encoder)
-    {
-        videoEncoder = encoder;
         return this;
     }
 
@@ -156,43 +121,24 @@ public class SessionBuilder
         session.setTimeToLive(timeToLive);
         session.setCallback(callback);
 
-        switch (audioEncoder)
+        AACStream aacStream = new AACStream();
+        aacStream.setAudioQuality(audioQuality);
+        aacStream.setDestinationPorts(5004);
+        session.addAudioTrack(aacStream); // TODO: Hard-coded port?
+
+        H264Stream h264Stream = new H264Stream(camera);
+        h264Stream.setVideoQuality(videoQuality);
+        h264Stream.setSurfaceView(surfaceView);
+        h264Stream.setPreviewOrientation(orientation);
+        h264Stream.setDestinationPorts(5006);
+
+        if (context != null)
         {
-            case AUDIO_AAC:
-                AACStream stream = new AACStream();
-                session.addAudioTrack(stream);
-                break;
+            // TODO: Get rid of preferences? Try not setting context
+            h264Stream.setPreferences(PreferenceManager.getDefaultSharedPreferences(context));
         }
 
-        switch (videoEncoder)
-        {
-            case VIDEO_H264:
-                H264Stream stream = new H264Stream(camera);
-                if (context != null)
-                {
-                    // TODO: Get rid of preferences? Try not setting context
-                    stream.setPreferences(PreferenceManager.getDefaultSharedPreferences(context));
-                }
-
-                session.addVideoTrack(stream);
-                break;
-        }
-
-        if (session.getVideoTrack() != null)
-        {
-            VideoStream video = session.getVideoTrack();
-            video.setVideoQuality(videoQuality);
-            video.setSurfaceView(surfaceView);
-            video.setPreviewOrientation(orientation);
-            video.setDestinationPorts(5006); // TODO: Hard-coded port?
-        }
-
-        if (session.getAudioTrack() != null)
-        {
-            AudioStream audio = session.getAudioTrack();
-            audio.setAudioQuality(audioQuality);
-            audio.setDestinationPorts(5004); // TODO: Hard-coded port?
-        }
+        session.addVideoTrack(h264Stream);
 
         return session;
     }

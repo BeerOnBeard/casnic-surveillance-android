@@ -37,9 +37,7 @@ public class MainActivity extends Activity implements Callback {
             .setCallback(this)
             .setSurfaceView(surfaceView)
             .setContext(getApplicationContext())
-            .setAudioEncoder(SessionBuilder.AUDIO_AAC)
             .setAudioQuality(new AudioQuality(16000, 32000))
-            .setVideoEncoder(SessionBuilder.VIDEO_H264)
             .setVideoQuality(new VideoQuality(320, 240, 20, 500000));
 
         Intent server = new Intent(this, RtspService.class);

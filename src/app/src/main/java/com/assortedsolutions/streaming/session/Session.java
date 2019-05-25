@@ -44,7 +44,7 @@ import android.util.Log;
  *
  * If you don't use the RTSP protocol, you will still need to send a session description to the receiver
  * for him to be able to decode your audio/video streams. You can obtain this session description by calling
- * {@link #syncConfigure()} to configure the session with its parameters
+ * {@link #configure()} to configure the session with its parameters
  * (audio samplingrate, video resolution) and then {@link Session#getSessionDescription()}.<br />
  *
  * See the example 2 here: https://github.com/fyhertz/libstreaming-examples to
@@ -101,7 +101,7 @@ public class Session
     /**
      * Creates a streaming session that can be customized by adding tracks.
      */
-    public Session()
+    Session()
     {
         long uptime = System.currentTimeMillis();
 
@@ -114,7 +114,7 @@ public class Session
         origin = "127.0.0.1";
     }
 
-    void addAudioTrack(AudioStream track)
+    public void addAudioTrack(AudioStream track)
     {
         removeAudioTrack();
         audioStream = track;
@@ -125,7 +125,7 @@ public class Session
         return audioStream;
     }
 
-    void removeAudioTrack()
+    public void removeAudioTrack()
     {
         if (audioStream == null)
         {
@@ -136,7 +136,7 @@ public class Session
         audioStream = null;
     }
 
-    void addVideoTrack(VideoStream track)
+    public void addVideoTrack(VideoStream track)
     {
         removeVideoTrack();
         videoStream = track;
@@ -147,7 +147,7 @@ public class Session
         return videoStream;
     }
 
-    void removeVideoTrack()
+    public void removeVideoTrack()
     {
         if (videoStream == null)
         {
@@ -281,7 +281,7 @@ public class Session
      * Throws exceptions in addition to calling a callback
      * {@link Callback#onSessionError} when an error occurs.
      **/
-    public void syncConfigure() throws RuntimeException, IOException
+    public void configure() throws RuntimeException, IOException
     {
         for (int id = 0; id < 2; id++)
         {
@@ -333,7 +333,7 @@ public class Session
      * Throws exceptions in addition to calling a callback.
      * @param id The id of the stream to start
      **/
-    public void syncStart(int id) throws CameraInUseException, ConfNotSupportedException, InvalidSurfaceException, IOException
+    public void start(int id) throws CameraInUseException, ConfNotSupportedException, InvalidSurfaceException, IOException
     {
         Stream stream = id == 0 ? audioStream : videoStream;
         if (stream != null && !stream.isStreaming())
@@ -351,7 +351,7 @@ public class Session
 
                 if (getTrack(1 - id) == null || !getTrack(1 - id).isStreaming())
                 {
-                    handler.post(mUpdateBitrate);
+                    handler.post(updateBitrate);
                 }
             }
             catch (UnknownHostException e)
@@ -393,10 +393,10 @@ public class Session
     }
 
     /** Stops all existing streams in a synchronous manner. */
-    public void syncStop()
+    public void stop()
     {
-        syncStop(0);
-        syncStop(1);
+        stop(0);
+        stop(1);
         postSessionStopped();
     }
 
@@ -404,7 +404,7 @@ public class Session
      * Stops one stream in a synchronous manner.
      * @param id The id of the stream to stop
      **/
-    private void syncStop(final int id)
+    private void stop(final int id)
     {
         Stream stream = id == 0 ? audioStream : videoStream;
         if (stream != null)
@@ -495,7 +495,7 @@ public class Session
         });
     }
 
-    private Runnable mUpdateBitrate = new Runnable()
+    private Runnable updateBitrate = new Runnable()
     {
         @Override
         public void run()
@@ -503,7 +503,7 @@ public class Session
             if (isStreaming())
             {
                 postBitRate(getBitrate());
-                handler.postDelayed(mUpdateBitrate, 500);
+                handler.postDelayed(updateBitrate, 500);
             }
             else
             {

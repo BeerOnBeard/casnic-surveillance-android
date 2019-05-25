@@ -103,7 +103,7 @@ class ClientConnection extends Thread implements Runnable
             }
         }
 
-        session.syncStop();
+        session.stop();
         session.release();
 
         try
@@ -191,7 +191,7 @@ class ClientConnection extends Thread implements Runnable
             session.setDestination(remoteHostAddress);
         }
 
-        session.syncConfigure();
+        session.configure();
 
         String content = session.getSessionDescription();
 
@@ -255,7 +255,7 @@ class ClientConnection extends Thread implements Runnable
         destination = session.getDestination();
 
         session.getTrack(trackId).setDestinationPorts(p1, p2);
-        session.syncStart(trackId);
+        session.start(trackId);
 
         Map<String, String> attributes = new HashMap<>();
 
