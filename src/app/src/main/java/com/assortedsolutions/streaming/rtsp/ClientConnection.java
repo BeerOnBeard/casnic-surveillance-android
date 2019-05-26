@@ -204,57 +204,57 @@ class ClientConnection extends Thread implements Runnable
 
     private Response setup(Request request) throws IOException
     {
-        Pattern p;
-        Matcher m;
-        int p2;
-        int p1;
+        Pattern pattern;
+        Matcher matcher;
+        int destinationPortOne;
+        int destinationPortTwo;
         int ssrc;
         int trackId;
         int[] src;
         String destination;
 
-        p = Pattern.compile("trackID=(\\w+)", Pattern.CASE_INSENSITIVE);
-        m = p.matcher(request.uri);
+        pattern = Pattern.compile("trackID=(\\w+)", Pattern.CASE_INSENSITIVE);
+        matcher = pattern.matcher(request.uri);
 
-        if (!m.find())
+        if (!matcher.find())
         {
             return new Response(Response.STATUS_BAD_REQUEST);
         }
 
-        trackId = Integer.parseInt(m.group(1));
+        trackId = Integer.parseInt(matcher.group(1));
 
-        if (!session.trackExists(trackId))
+        if (!session.streamExists(trackId))
         {
             return new Response(Response.STATUS_NOT_FOUND);
         }
 
-        p = Pattern.compile("client_port=(\\d+)(?:-(\\d+))?", Pattern.CASE_INSENSITIVE);
-        m = p.matcher(request.headers.get("transport"));
+        pattern = Pattern.compile("client_port=(\\d+)(?:-(\\d+))?", Pattern.CASE_INSENSITIVE);
+        matcher = pattern.matcher(request.headers.get("transport"));
 
-        if (!m.find())
+        if (!matcher.find())
         {
-            int[] ports = session.getTrack(trackId).getDestinationPorts();
-            p1 = ports[0];
-            p2 = ports[1];
+            int[] ports = session.getStream(trackId).getDestinationPorts();
+            destinationPortOne = ports[0];
+            destinationPortTwo = ports[1];
         }
         else
         {
-            p1 = Integer.parseInt(m.group(1));
-            if (m.group(2) == null)
+            destinationPortOne = Integer.parseInt(matcher.group(1));
+            if (matcher.group(2) == null)
             {
-                p2 = p1+1;
+                destinationPortTwo = destinationPortOne + 1;
             }
             else
             {
-                p2 = Integer.parseInt(m.group(2));
+                destinationPortTwo = Integer.parseInt(matcher.group(2));
             }
         }
 
-        ssrc = session.getTrack(trackId).getSSRC();
-        src = session.getTrack(trackId).getLocalPorts();
+        ssrc = session.getStream(trackId).getSSRC();
+        src = session.getStream(trackId).getLocalPorts();
         destination = session.getDestination();
 
-        session.getTrack(trackId).setDestinationPorts(p1, p2);
+        session.getStream(trackId).setDestinationPorts(destinationPortOne, destinationPortTwo);
         session.start(trackId);
 
         Map<String, String> attributes = new HashMap<>();
@@ -262,7 +262,7 @@ class ClientConnection extends Thread implements Runnable
         String transport =
             "RTP/AVP/UDP;" + (InetAddress.getByName(destination).isMulticastAddress() ? "multicast" : "unicast") +
             ";destination=" + session.getDestination() +
-            ";client_port=" + p1 + "-" + p2 +
+            ";client_port=" + destinationPortOne + "-" + destinationPortTwo +
             ";server_port=" + src[0] + "-" + src[1] +
             ";ssrc=" + Integer.toHexString(ssrc) +
             ";mode=play";
@@ -277,12 +277,12 @@ class ClientConnection extends Thread implements Runnable
     private Response play(Request request)
     {
         String rtpInfo = "";
-        if (session.trackExists(0))
+        if (session.streamExists(0))
         {
             rtpInfo += "url=rtsp://" + localHostAddress + ":" + localHostPort + "/trackID=0;seq=0,";
         }
 
-        if (session.trackExists(1))
+        if (session.streamExists(1))
         {
             rtpInfo += "url=rtsp://" + localHostAddress + ":" + localHostPort + "/trackID=1;seq=0,";
         }

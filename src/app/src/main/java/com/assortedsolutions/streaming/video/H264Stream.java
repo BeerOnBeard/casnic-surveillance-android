@@ -24,7 +24,6 @@ import com.assortedsolutions.streaming.hw.EncoderDebugger;
 import com.assortedsolutions.streaming.mp4.MP4Config;
 import com.assortedsolutions.streaming.rtp.H264Packetizer;
 import android.graphics.ImageFormat;
-import android.hardware.Camera.CameraInfo;
 import android.media.MediaRecorder;
 import android.service.textservice.SpellCheckerService.Session;
 import android.util.Base64;
@@ -33,7 +32,7 @@ import android.util.Log;
 /**
  * A class for streaming H.264 from the camera of an android device using RTP.
  * You should use a {@link Session} instantiated with {@link SessionBuilder} instead of using this class directly.
- * Call {@link #setDestinationAddress(InetAddress)}, {@link #setDestinationPorts(int)} and {@link #setVideoQuality(VideoQuality)}
+ * Call {@link #setDestinationAddress}, {@link #setDestinationPorts(int)} and {@link #setVideoQuality(VideoQuality)}
  * to configure the stream. You can then call {@link #start()} to start the RTP stream.
  * Call {@link #stop()} to stop the stream.
  */
@@ -41,7 +40,7 @@ public class H264Stream extends VideoStream
 {
     public final static String TAG = "H264Stream";
 
-    private MP4Config mConfig;
+    private MP4Config mp4Config;
 
     /**
      * Constructs the H.264 stream.
@@ -51,10 +50,10 @@ public class H264Stream extends VideoStream
     public H264Stream(int cameraId)
     {
         super(cameraId);
-        mMimeType = "video/avc";
-        mCameraImageFormat = ImageFormat.NV21;
-        mVideoEncoder = MediaRecorder.VideoEncoder.H264;
-        mPacketizer = new H264Packetizer();
+        mimeType = "video/avc";
+        cameraImageFormat = ImageFormat.NV21;
+        videoEncoder = MediaRecorder.VideoEncoder.H264;
+        packetizer = new H264Packetizer();
     }
 
     /**
@@ -62,15 +61,15 @@ public class H264Stream extends VideoStream
      */
     public synchronized String getSessionDescription() throws IllegalStateException
     {
-        if (mConfig == null)
+        if (mp4Config == null)
         {
             throw new IllegalStateException("You need to call configure() first");
         }
 
         return "m=video " + getDestinationPorts()[0] + " RTP/AVP 96\r\n" +
                 "a=rtpmap:96 H264/90000\r\n" +
-                "a=fmtp:96 packetization-mode=1;profile-level-id=" + mConfig.getProfileLevel() +
-                ";sprop-parameter-sets=" + mConfig.getB64SPS() + "," + mConfig.getB64PPS() +
+                "a=fmtp:96 packetization-mode=1;profile-level-id=" + mp4Config.getProfileLevel() +
+                ";sprop-parameter-sets=" + mp4Config.getB64SPS() + "," + mp4Config.getB64PPS() +
                 ";\r\n";
     }
 
@@ -80,12 +79,12 @@ public class H264Stream extends VideoStream
      */
     public synchronized void start() throws IllegalStateException, IOException
     {
-        if (!mStreaming)
+        if (!streaming)
         {
             configure();
-            byte[] pps = Base64.decode(mConfig.getB64PPS(), Base64.NO_WRAP);
-            byte[] sps = Base64.decode(mConfig.getB64SPS(), Base64.NO_WRAP);
-            ((H264Packetizer)mPacketizer).setStreamParameters(pps, sps);
+            byte[] pps = Base64.decode(mp4Config.getB64PPS(), Base64.NO_WRAP);
+            byte[] sps = Base64.decode(mp4Config.getB64SPS(), Base64.NO_WRAP);
+            ((H264Packetizer) packetizer).setStreamParameters(pps, sps);
             super.start();
         }
     }
@@ -97,8 +96,8 @@ public class H264Stream extends VideoStream
     public synchronized void configure() throws IllegalStateException, IOException
     {
         super.configure();
-        mQuality = mRequestedQuality.clone();
-        mConfig = testMediaCodecAPI();
+        quality = requestedQuality.clone();
+        mp4Config = testMediaCodecAPI();
     }
 
     /**
@@ -111,7 +110,7 @@ public class H264Stream extends VideoStream
         updateCamera();
         try
         {
-            EncoderDebugger debugger = EncoderDebugger.debug(mSettings, mQuality.resX, mQuality.resY);
+            EncoderDebugger debugger = EncoderDebugger.debug(settings, quality.resX, quality.resY);
             return new MP4Config(debugger.getB64SPS(), debugger.getB64PPS());
         }
         catch (Exception e)

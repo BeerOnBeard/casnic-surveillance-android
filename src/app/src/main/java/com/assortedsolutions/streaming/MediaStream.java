@@ -19,7 +19,6 @@
 package com.assortedsolutions.streaming;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.InetAddress;
 import com.assortedsolutions.streaming.audio.AudioStream;
 import com.assortedsolutions.streaming.rtp.AbstractPacketizer;
@@ -38,20 +37,18 @@ public abstract class MediaStream implements Stream
     /** Prefix that will be used for all shared preferences saved by libstreaming */
     protected static final String PREF_PREFIX = "libstreaming-";
 
-    /** The packetizer that will read the output of the camera and send RTP packets over the networked. */
-    protected AbstractPacketizer mPacketizer = null;
+    /** The packetizer that will read the output of the camera and send RTP packets over the network. */
+    protected AbstractPacketizer packetizer = null;
     
-    protected boolean mStreaming = false;
-    protected boolean mConfigured = false;
-    protected int mRtpPort = 0;
-    protected int mRtcpPort = 0;
-    protected byte mChannelIdentifier = 0;
-    protected OutputStream mOutputStream = null;
-    protected InetAddress mDestination;
+    protected boolean streaming = false;
+    protected boolean configured = false;
+    protected int rtpPort = 0;
+    protected int rtcpPort = 0;
+    protected InetAddress destination;
 
-    private int mTTL = 64;
+    private int timeToLive = 64;
 
-    protected MediaCodec mMediaCodec;
+    protected MediaCodec mediaCodec;
 
     static
     {
@@ -74,7 +71,7 @@ public abstract class MediaStream implements Stream
      */
     public void setDestinationAddress(InetAddress dest)
     {
-        mDestination = dest;
+        destination = dest;
     }
 
     /**
@@ -89,13 +86,13 @@ public abstract class MediaStream implements Stream
     {
         if (dport % 2 == 1)
         {
-            mRtpPort = dport-1;
-            mRtcpPort = dport;
+            rtpPort = dport-1;
+            rtcpPort = dport;
         }
         else
         {
-            mRtpPort = dport;
-            mRtcpPort = dport+1;
+            rtpPort = dport;
+            rtcpPort = dport+1;
         }
     }
 
@@ -106,20 +103,8 @@ public abstract class MediaStream implements Stream
      */
     public void setDestinationPorts(int rtpPort, int rtcpPort)
     {
-        mRtpPort = rtpPort;
-        mRtcpPort = rtcpPort;
-        mOutputStream = null;
-    }
-
-    /**
-     * If a TCP is used as the transport protocol for the RTP session,
-     * the output stream to which RTP packets will be written to must
-     * be specified with this method.
-     */
-    public void setOutputStream(OutputStream stream, byte channelIdentifier)
-    {
-        mOutputStream = stream;
-        mChannelIdentifier = channelIdentifier;
+        this.rtpPort = rtpPort;
+        this.rtcpPort = rtcpPort;
     }
 
     /**
@@ -128,7 +113,7 @@ public abstract class MediaStream implements Stream
      */
     public void setTimeToLive(int ttl)
     {
-        mTTL = ttl;
+        timeToLive = ttl;
     }
 
     /**
@@ -137,7 +122,7 @@ public abstract class MediaStream implements Stream
      **/
     public int[] getDestinationPorts()
     {
-        return new int[] { mRtpPort, mRtcpPort };
+        return new int[] {rtpPort, rtcpPort};
     }
 
     /**
@@ -146,7 +131,7 @@ public abstract class MediaStream implements Stream
      **/
     public int[] getLocalPorts()
     {
-        return mPacketizer.getRtpSocket().getLocalPorts();
+        return packetizer.getRtpSocket().getLocalPorts();
     }
 
     /**
@@ -155,15 +140,15 @@ public abstract class MediaStream implements Stream
      */
     public AbstractPacketizer getPacketizer()
     {
-        return mPacketizer;
+        return packetizer;
     }
 
     /**
-     * Returns an approximation of the bit rate consumed by the stream in bit per seconde.
+     * Returns an approximation of the bit rate consumed by the stream in bit per second.
      */
     public long getBitrate()
     {
-        return !mStreaming ? 0 : mPacketizer.getRtpSocket().getBitrate();
+        return !streaming ? 0 : packetizer.getRtpSocket().getBitrate();
     }
 
     /**
@@ -172,7 +157,7 @@ public abstract class MediaStream implements Stream
      */
     public boolean isStreaming()
     {
-        return mStreaming;
+        return streaming;
     }
 
     /**
@@ -183,57 +168,56 @@ public abstract class MediaStream implements Stream
      */
     public synchronized void configure() throws IllegalStateException, IOException
     {
-        if (mStreaming)
+        if (streaming)
         {
             throw new IllegalStateException("Configure cannot be called while streaming.");
         }
 
-        if (mPacketizer != null)
+        if (packetizer != null)
         {
-            mPacketizer.setDestination(mDestination, mRtpPort, mRtcpPort);
-            mPacketizer.getRtpSocket().setOutputStream(mOutputStream, mChannelIdentifier);
+            packetizer.setDestination(destination, rtpPort, rtcpPort);
         }
 
-        mConfigured = true;
+        configured = true;
     }
 
     public synchronized void start() throws IllegalStateException, IOException
     {
-        if (mDestination == null)
+        if (destination == null)
         {
             throw new IllegalStateException("No destination ip address set for the stream !");
         }
 
-        if (mRtpPort <= 0 || mRtcpPort <= 0)
+        if (rtpPort <= 0 || rtcpPort <= 0)
         {
             throw new IllegalStateException("No destination ports set for the stream !");
         }
 
-        mPacketizer.setTimeToLive(mTTL);
+        packetizer.setTimeToLive(timeToLive);
 
         encodeWithMediaCodec();
     }
 
     public synchronized void stop()
     {
-        if (!mStreaming)
+        if (!streaming)
         {
             return;
         }
 
         try
         {
-            mPacketizer.stop();
-            mMediaCodec.stop();
-            mMediaCodec.release();
-            mMediaCodec = null;
+            packetizer.stop();
+            mediaCodec.stop();
+            mediaCodec.release();
+            mediaCodec = null;
         }
         catch (Exception e)
         {
             Log.e(TAG, "Stopping threw", e);
         }
 
-        mStreaming = false;
+        streaming = false;
     }
 
     protected abstract void encodeWithMediaCodec() throws IOException;

@@ -19,7 +19,6 @@
 package com.assortedsolutions.streaming;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.net.InetAddress;
 
 /**
@@ -75,13 +74,6 @@ public interface Stream
     void setDestinationPorts(int rtpPort, int rtcpPort);
 
     /**
-     * If a TCP is used as the transport protocol for the RTP session,
-     * the output stream to which RTP packets will be written to must
-     * be specified with this method.
-     */
-    void setOutputStream(OutputStream stream, byte channelIdentifier);
-
-    /**
      * Returns a pair of source ports, the first one is the
      * one used for RTP and the second one is used for RTCP.
      **/
@@ -95,7 +87,7 @@ public interface Stream
 
 
     /**
-     * Returns the SSRC of the underlying {@link com.assortedsolutions.streaming.rtp.RtpSocket}.
+     * Returns the SSRC (Synchronization Source) of the underlying {@link com.assortedsolutions.streaming.rtp.RtpSocket}.
      * @return the SSRC of the stream.
      */
     int getSSRC();

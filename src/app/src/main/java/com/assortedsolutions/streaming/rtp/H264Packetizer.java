@@ -68,7 +68,7 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable
         {
             try
             {
-                is.close();
+                inputStream.close();
             }
             catch (IOException e)
             {
@@ -125,7 +125,7 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable
         stats.reset();
         count = 0;
 
-        if (is instanceof MediaCodecInputStream)
+        if (inputStream instanceof MediaCodecInputStream)
         {
             streamType = 1;
             socket.setCacheSize(0);
@@ -189,10 +189,10 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable
         {
             // NAL units are preceeded with 0x00000001
             fill(header,0,5);
-            ts = ((MediaCodecInputStream)is).getLastBufferInfo().presentationTimeUs * 1000L;
+            ts = ((MediaCodecInputStream) inputStream).getLastBufferInfo().presentationTimeUs * 1000L;
 
             //ts += delay;
-            naluLength = is.available() + 1;
+            naluLength = inputStream.available() + 1;
             if (!(header[0] == 0 && header[1] == 0 && header[2] == 0))
             {
                 // Turns out, the NAL units are not preceded with 0x00000001
@@ -206,10 +206,10 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable
             // Nothing preceededs the NAL units
             fill(header,0,1);
             header[4] = header[0];
-            ts = ((MediaCodecInputStream)is).getLastBufferInfo().presentationTimeUs * 1000L;
+            ts = ((MediaCodecInputStream) inputStream).getLastBufferInfo().presentationTimeUs * 1000L;
 
             //ts += delay;
-            naluLength = is.available()+1;
+            naluLength = inputStream.available()+1;
         }
 
         // Parses the NAL unit type
@@ -235,19 +235,19 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable
             buffer = socket.requestBuffer();
             socket.markNextPacket();
             socket.updateTimestamp(ts);
-            System.arraycopy(stapa, 0, buffer, rtphl, stapa.length);
-            super.send(rtphl+stapa.length);
+            System.arraycopy(stapa, 0, buffer, rtpHeaderLength, stapa.length);
+            super.send(rtpHeaderLength +stapa.length);
         }
 
         // Small NAL unit => Single NAL unit
-        if (naluLength <= MAXPACKETSIZE-rtphl - 2)
+        if (naluLength <= MAXPACKETSIZE- rtpHeaderLength - 2)
         {
             buffer = socket.requestBuffer();
-            buffer[rtphl] = header[4];
-            len = fill(buffer, rtphl + 1,  naluLength - 1);
+            buffer[rtpHeaderLength] = header[4];
+            len = fill(buffer, rtpHeaderLength + 1,  naluLength - 1);
             socket.updateTimestamp(ts);
             socket.markNextPacket();
-            super.send(naluLength + rtphl);
+            super.send(naluLength + rtpHeaderLength);
         }
         // Large NAL unit => Split nal unit
         else
@@ -263,10 +263,10 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable
             while (sum < naluLength)
             {
                 buffer = socket.requestBuffer();
-                buffer[rtphl] = header[0];
-                buffer[rtphl + 1] = header[1];
+                buffer[rtpHeaderLength] = header[0];
+                buffer[rtpHeaderLength + 1] = header[1];
                 socket.updateTimestamp(ts);
-                if ((len = fill(buffer,rtphl + 2, naluLength - sum > MAXPACKETSIZE - rtphl - 2 ? MAXPACKETSIZE - rtphl - 2 : naluLength - sum)) < 0)
+                if ((len = fill(buffer, rtpHeaderLength + 2, naluLength - sum > MAXPACKETSIZE - rtpHeaderLength - 2 ? MAXPACKETSIZE - rtpHeaderLength - 2 : naluLength - sum)) < 0)
                 {
                     return;
                 }
@@ -277,11 +277,11 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable
                 if (sum >= naluLength)
                 {
                     // End bit on
-                    buffer[rtphl + 1] += 0x40;
+                    buffer[rtpHeaderLength + 1] += 0x40;
                     socket.markNextPacket();
                 }
 
-                super.send(len + rtphl + 2);
+                super.send(len + rtpHeaderLength + 2);
 
                 // Switch start bit
                 header[1] = (byte) (header[1] & 0x7F);
@@ -294,7 +294,7 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable
         int sum = 0, len;
         while (sum < length)
         {
-            len = is.read(buffer, offset + sum, length - sum);
+            len = inputStream.read(buffer, offset + sum, length - sum);
             if (len < 0)
             {
                 throw new IOException("End of stream");
@@ -318,7 +318,7 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable
             header[1] = header[2];
             header[2] = header[3];
             header[3] = header[4];
-            header[4] = (byte) is.read();
+            header[4] = (byte) inputStream.read();
 
             type = header[4]&0x1F;
 

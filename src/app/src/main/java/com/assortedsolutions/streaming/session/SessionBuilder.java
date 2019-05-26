@@ -123,22 +123,21 @@ public final class SessionBuilder
 
         AACStream aacStream = new AACStream();
         aacStream.setAudioQuality(audioQuality);
-        aacStream.setDestinationPorts(5004);
-        session.addAudioTrack(aacStream); // TODO: Hard-coded port?
+        aacStream.setDestinationPorts(5004); // TODO: Hard-coded port?
+        session.addAudioStream(aacStream);
 
         H264Stream h264Stream = new H264Stream(camera);
         h264Stream.setVideoQuality(videoQuality);
         h264Stream.setSurfaceView(surfaceView);
         h264Stream.setPreviewOrientation(orientation);
-        h264Stream.setDestinationPorts(5006);
+        h264Stream.setDestinationPorts(5006); // TODO: Hard-coded port?
 
         if (context != null)
         {
-            // TODO: Get rid of preferences? Try not setting context
             h264Stream.setPreferences(PreferenceManager.getDefaultSharedPreferences(context));
         }
 
-        session.addVideoTrack(h264Stream);
+        session.addVideoStream(h264Stream);
 
         return session;
     }

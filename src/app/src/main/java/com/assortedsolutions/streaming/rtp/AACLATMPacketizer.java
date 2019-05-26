@@ -34,7 +34,7 @@ public class AACLATMPacketizer extends AbstractPacketizer implements Runnable
 {
     private final static String TAG = "AACLATMPacketizer";
 
-    private Thread t;
+    private Thread thread;
 
     public AACLATMPacketizer()
     {
@@ -44,41 +44,42 @@ public class AACLATMPacketizer extends AbstractPacketizer implements Runnable
 
     public void start()
     {
-        if (t == null)
+        if (thread == null)
         {
-            t = new Thread(this);
-            t.start();
+            thread = new Thread(this);
+            thread.start();
         }
     }
 
     public void stop()
     {
-        if (t != null)
+        if (thread != null)
         {
             try
             {
-                is.close();
+                inputStream.close();
             }
             catch (IOException ignore)
             {
                 Log.e(TAG, "Closing input stream threw", ignore);
             }
 
-            t.interrupt();
+            thread.interrupt();
             try
             {
-                t.join();
+                thread.join();
             }
             catch (InterruptedException e)
             {
                 Log.e(TAG, "Waiting for thread to die threw", e);
             }
 
-            t = null;
+            thread = null;
         }
     }
 
-    public void setSamplingRate(int samplingRate) {
+    public void setSamplingRate(int samplingRate)
+    {
         socket.setClockFrequency(samplingRate);
     }
 
@@ -95,11 +96,11 @@ public class AACLATMPacketizer extends AbstractPacketizer implements Runnable
             while (!Thread.interrupted())
             {
                 buffer = socket.requestBuffer();
-                length = is.read(buffer, rtphl + 4, MAXPACKETSIZE - (rtphl + 4));
+                length = inputStream.read(buffer, rtpHeaderLength + 4, MAXPACKETSIZE - (rtpHeaderLength + 4));
 
                 if (length > 0)
                 {
-                    bufferInfo = ((MediaCodecInputStream)is).getLastBufferInfo();
+                    bufferInfo = ((MediaCodecInputStream) inputStream).getLastBufferInfo();
 
                     //Log.d(TAG,"length: "+length+" ts: "+bufferInfo.presentationTimeUs);
                     oldts = ts;
@@ -118,18 +119,18 @@ public class AACLATMPacketizer extends AbstractPacketizer implements Runnable
                     // AU-headers-length field: contains the size in bits of a AU-header
                     // 13+3 = 16 bits -> 13bits for AU-size and 3bits for AU-Index / AU-Index-delta
                     // 13 bits will be enough because ADTS uses 13 bits for frame length
-                    buffer[rtphl] = 0;
-                    buffer[rtphl + 1] = 0x10;
+                    buffer[rtpHeaderLength] = 0;
+                    buffer[rtpHeaderLength + 1] = 0x10;
 
                     // AU-size
-                    buffer[rtphl + 2] = (byte) (length >> 5);
-                    buffer[rtphl + 3] = (byte) (length << 3);
+                    buffer[rtpHeaderLength + 2] = (byte) (length >> 5);
+                    buffer[rtpHeaderLength + 3] = (byte) (length << 3);
 
                     // AU-Index
-                    buffer[rtphl + 3] &= 0xF8;
-                    buffer[rtphl + 3] |= 0x00;
+                    buffer[rtpHeaderLength + 3] &= 0xF8;
+                    buffer[rtpHeaderLength + 3] |= 0x00;
 
-                    send(rtphl + length + 4);
+                    send(rtpHeaderLength + length + 4);
 
                 }
                 else

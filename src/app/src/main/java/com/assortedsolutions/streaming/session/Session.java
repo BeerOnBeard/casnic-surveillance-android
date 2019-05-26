@@ -99,7 +99,7 @@ public class Session
     private Handler handler;
 
     /**
-     * Creates a streaming session that can be customized by adding tracks.
+     * Creates a streaming session that can be customized by adding streams.
      */
     Session()
     {
@@ -114,18 +114,18 @@ public class Session
         origin = "127.0.0.1";
     }
 
-    public void addAudioTrack(AudioStream track)
+    public void addAudioStream(AudioStream stream)
     {
-        removeAudioTrack();
-        audioStream = track;
+        removeAudioStream();
+        audioStream = stream;
     }
 
-    public AudioStream getAudioTrack()
+    public AudioStream getAudioStream()
     {
         return audioStream;
     }
 
-    public void removeAudioTrack()
+    public void removeAudioStream()
     {
         if (audioStream == null)
         {
@@ -136,18 +136,18 @@ public class Session
         audioStream = null;
     }
 
-    public void addVideoTrack(VideoStream track)
+    public void addVideoStream(VideoStream stream)
     {
-        removeVideoTrack();
-        videoStream = track;
+        removeVideoStream();
+        videoStream = stream;
     }
 
-    public VideoStream getVideoTrack()
+    public VideoStream getVideoStream()
     {
         return videoStream;
     }
 
-    public void removeVideoTrack()
+    public void removeVideoStream()
     {
         if (videoStream == null)
         {
@@ -158,7 +158,7 @@ public class Session
         videoStream = null;
     }
 
-    public boolean trackExists(int id)
+    public boolean streamExists(int id)
     {
         if (id == 0)
         {
@@ -168,7 +168,7 @@ public class Session
         return videoStream != null;
     }
 
-    public Stream getTrack(int id)
+    public Stream getStream(int id)
     {
         if (id == 0)
         {
@@ -230,12 +230,12 @@ public class Session
      */
     public String getSessionDescription()
     {
-        StringBuilder sessionDescription = new StringBuilder();
         if (destination == null)
         {
-            throw new IllegalStateException("setDestination() has not been called !");
+            throw new IllegalStateException("setDestination() has not been called");
         }
 
+        StringBuilder sessionDescription = new StringBuilder();
         sessionDescription.append("v=0\r\n");
 
         // TODO: Add IPV6 support
@@ -270,7 +270,7 @@ public class Session
         return (audioStream == null ? 0 : audioStream.getBitrate()) + (videoStream == null ? 0 : videoStream.getBitrate());
     }
 
-    /** Indicates if a track is currently running. */
+    /** Indicates if a stream is currently running. */
     public boolean isStreaming()
     {
         return (audioStream != null && audioStream.isStreaming()) || (videoStream != null && videoStream.isStreaming());
@@ -340,16 +340,17 @@ public class Session
         {
             try
             {
-                InetAddress destination =  InetAddress.getByName(this.destination);
+                InetAddress destination = InetAddress.getByName(this.destination);
                 stream.setTimeToLive(timeToLive);
                 stream.setDestinationAddress(destination);
                 stream.start();
-                if (getTrack(1 - id) == null || getTrack(1 - id).isStreaming())
+
+                if (getStream(1 - id) == null || getStream(1 - id).isStreaming())
                 {
                     postSessionStarted();
                 }
 
-                if (getTrack(1 - id) == null || !getTrack(1 - id).isStreaming())
+                if (getStream(1 - id) == null || !getStream(1 - id).isStreaming())
                 {
                     handler.post(updateBitrate);
                 }
@@ -413,11 +414,11 @@ public class Session
         }
     }
 
-    /** Deletes all existing tracks & release associated resources. */
+    /** Deletes all existing streams & release associated resources. */
     public void release()
     {
-        removeAudioTrack();
-        removeVideoTrack();
+        removeAudioStream();
+        removeVideoStream();
         handler.getLooper().quit();
     }
 

@@ -110,7 +110,7 @@ public class AACStream extends AudioStream
     @Override
     public synchronized void start() throws IllegalStateException, IOException
     {
-        if (!mStreaming)
+        if (!streaming)
         {
             configure();
             super.start();
@@ -139,11 +139,10 @@ public class AACStream extends AudioStream
             mQuality.samplingRate = 16000;
         }
 
-        if (mPacketizer == null)
+        if (packetizer == null)
         {
-            mPacketizer = new AACLATMPacketizer();
-            mPacketizer.setDestination(mDestination, mRtpPort, mRtcpPort);
-            mPacketizer.getRtpSocket().setOutputStream(mOutputStream, mChannelIdentifier);
+            packetizer = new AACLATMPacketizer();
+            packetizer.setDestination(destination, rtpPort, rtcpPort);
         }
 
         mProfile = 2; // AAC LC
@@ -161,10 +160,10 @@ public class AACStream extends AudioStream
     {
         final int bufferSize = AudioRecord.getMinBufferSize(mQuality.samplingRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT) * 2;
 
-        ((AACLATMPacketizer)mPacketizer).setSamplingRate(mQuality.samplingRate);
+        ((AACLATMPacketizer) packetizer).setSamplingRate(mQuality.samplingRate);
 
         mAudioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC, mQuality.samplingRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, bufferSize);
-        mMediaCodec = MediaCodec.createEncoderByType("audio/mp4a-latm");
+        mediaCodec = MediaCodec.createEncoderByType("audio/mp4a-latm");
         MediaFormat format = new MediaFormat();
         format.setString(MediaFormat.KEY_MIME, "audio/mp4a-latm");
         format.setInteger(MediaFormat.KEY_BIT_RATE, mQuality.bitRate);
@@ -172,12 +171,12 @@ public class AACStream extends AudioStream
         format.setInteger(MediaFormat.KEY_SAMPLE_RATE, mQuality.samplingRate);
         format.setInteger(MediaFormat.KEY_AAC_PROFILE, MediaCodecInfo.CodecProfileLevel.AACObjectLC);
         format.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, bufferSize);
-        mMediaCodec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
+        mediaCodec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
         mAudioRecord.startRecording();
-        mMediaCodec.start();
+        mediaCodec.start();
 
-        final MediaCodecInputStream inputStream = new MediaCodecInputStream(mMediaCodec);
-        final ByteBuffer[] inputBuffers = mMediaCodec.getInputBuffers();
+        final MediaCodecInputStream inputStream = new MediaCodecInputStream(mediaCodec);
+        final ByteBuffer[] inputBuffers = mediaCodec.getInputBuffers();
 
         mThread = new Thread(new Runnable() {
             @Override
@@ -189,7 +188,7 @@ public class AACStream extends AudioStream
             {
                 while (!Thread.interrupted())
                 {
-                    bufferIndex = mMediaCodec.dequeueInputBuffer(10000);
+                    bufferIndex = mediaCodec.dequeueInputBuffer(10000);
 
                     if (bufferIndex >= 0)
                     {
@@ -202,7 +201,7 @@ public class AACStream extends AudioStream
                         }
                         else
                         {
-                            mMediaCodec.queueInputBuffer(bufferIndex, 0, len, System.nanoTime() / 1000, 0);
+                            mediaCodec.queueInputBuffer(bufferIndex, 0, len, System.nanoTime() / 1000, 0);
                         }
                     }
                 }
@@ -217,16 +216,16 @@ public class AACStream extends AudioStream
         mThread.start();
 
         // The packetizer encapsulates this stream in an RTP stream and send it over the network
-        mPacketizer.setInputStream(inputStream);
-        mPacketizer.start();
+        packetizer.setInputStream(inputStream);
+        packetizer.start();
 
-        mStreaming = true;
+        streaming = true;
     }
 
     /** Stops the stream. */
     public synchronized void stop()
     {
-        if (mStreaming)
+        if (streaming)
         {
             Log.d(TAG, "Interrupting threads...");
             mThread.interrupt();

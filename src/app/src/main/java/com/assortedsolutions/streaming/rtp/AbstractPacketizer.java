@@ -30,13 +30,13 @@ import java.util.Random;
  */
 abstract public class AbstractPacketizer
 {
-    protected static final int rtphl = RtpSocket.RTP_HEADER_LENGTH;
+    protected static final int rtpHeaderLength = RtpSocket.RTP_HEADER_LENGTH;
 
     // Maximum size of RTP packets
     protected final static int MAXPACKETSIZE = RtpSocket.MTU - 28;
 
     protected RtpSocket socket = null;
-    protected InputStream is = null;
+    protected InputStream inputStream = null;
     protected byte[] buffer;
 
     protected long ts = 0;
@@ -58,7 +58,7 @@ abstract public class AbstractPacketizer
     }
 
     public void setInputStream(InputStream is) {
-        this.is = is;
+        this.inputStream = is;
     }
 
     public void setTimeToLive(int ttl) throws IOException
