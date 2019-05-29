@@ -41,8 +41,8 @@ public class MainActivity extends Activity implements Callback {
             .setVideoQuality(new VideoQuality(320, 240, 20, 500000));
 
         Intent server = new Intent(this, RtspService.class);
-        server.putExtra(RtspService.EXTRA_KEY_USERNAME, "admin");
-        server.putExtra(RtspService.EXTRA_KEY_PASSWORD, "changeit");
+        server.putExtra(RtspService.EXTRA_KEY_USERNAME, getString(R.string.rtsp_service_username));
+        server.putExtra(RtspService.EXTRA_KEY_PASSWORD, getString(R.string.rtsp_service_password));
 
         Log.d(TAG, "starting RTSP Server service");
         startService(server);
