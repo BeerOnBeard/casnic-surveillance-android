@@ -1,21 +1,3 @@
-/*
- * Copyright (C) 2011-2015 GUIGUI Simon, fyhertz@gmail.com
- *
- * This file is part of libstreaming (https://github.com/fyhertz/libstreaming)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package com.assortedsolutions.streaming.rtp;
 
 import java.io.IOException;
@@ -35,11 +17,11 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable
 {
     public final static String TAG = "H264Packetizer";
 
-    private Thread t = null;
-    private int naluLength = 0;
+    private Thread thread = null;
+    private int nalLength = 0;
     private long delay = 0;
     private long oldtime = 0;
-    private Statistics stats = new Statistics();
+    private PacketizerStatistics stats = new PacketizerStatistics();
     private byte[] sps = null;
     private byte[] pps = null;
     private byte[] stapa = null;
@@ -55,39 +37,43 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable
 
     public void start()
     {
-        if (t == null)
+        if (thread != null)
         {
-            t = new Thread(this);
-            t.start();
+            return;
         }
+
+        thread = new Thread(this);
+        thread.start();
     }
 
     public void stop()
     {
-        if (t != null)
+        if (thread == null)
         {
-            try
-            {
-                inputStream.close();
-            }
-            catch (IOException e)
-            {
-                Log.e(TAG, "Closing input stream threw", e);
-            }
-
-            t.interrupt();
-
-            try
-            {
-                t.join();
-            }
-            catch (InterruptedException e)
-            {
-                Log.e(TAG, "Waiting for thread to die threw", e);
-            }
-
-            t = null;
+            return;
         }
+
+        try
+        {
+            inputStream.close();
+        }
+        catch (IOException e)
+        {
+            Log.e(TAG, "Closing input stream threw", e);
+        }
+
+        thread.interrupt();
+
+        try
+        {
+            thread.join();
+        }
+        catch (InterruptedException e)
+        {
+            Log.e(TAG, "Waiting for thread to die threw", e);
+        }
+
+        thread = null;
     }
 
     public void setStreamParameters(byte[] pps, byte[] sps)
@@ -121,7 +107,9 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable
     public void run()
     {
         long duration = 0;
+
         Log.d(TAG,"H264 packetizer started!");
+
         stats.reset();
         count = 0;
 
@@ -172,15 +160,17 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable
      */
     private void send() throws IOException, InterruptedException
     {
-        int sum = 1, len = 0, type;
+        int sum = 1;
+        int len = 0;
+        int type;
 
         if (streamType == 0)
         {
             // NAL units are preceeded by their length, we parse the length
             fill(header,0,5);
-            ts += delay;
-            naluLength = header[3] & 0xFF | (header[2] & 0xFF) << 8 | (header[1] & 0xFF) << 16 | (header[0] & 0xFF) << 24;
-            if (naluLength > 100000 || naluLength < 0)
+            timestamp += delay;
+            nalLength = header[3] & 0xFF | (header[2] & 0xFF) << 8 | (header[1] & 0xFF) << 16 | (header[0] & 0xFF) << 24;
+            if (nalLength > 100000 || nalLength < 0)
             {
                 resync();
             }
@@ -189,37 +179,37 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable
         {
             // NAL units are preceeded with 0x00000001
             fill(header,0,5);
-            ts = ((MediaCodecInputStream) inputStream).getLastBufferInfo().presentationTimeUs * 1000L;
+            timestamp = ((MediaCodecInputStream) inputStream).getLastBufferInfo().presentationTimeUs * 1000L;
 
-            //ts += delay;
-            naluLength = inputStream.available() + 1;
+            //timestamp += delay;
+            nalLength = inputStream.available() + 1;
             if (!(header[0] == 0 && header[1] == 0 && header[2] == 0))
             {
-                // Turns out, the NAL units are not preceded with 0x00000001
                 Log.e(TAG, "NAL units are not preceded by 0x00000001");
+
                 streamType = 2;
                 return;
             }
         }
         else
         {
-            // Nothing preceededs the NAL units
+            // Nothing precedes the NAL units
             fill(header,0,1);
             header[4] = header[0];
-            ts = ((MediaCodecInputStream) inputStream).getLastBufferInfo().presentationTimeUs * 1000L;
+            timestamp = ((MediaCodecInputStream) inputStream).getLastBufferInfo().presentationTimeUs * 1000L;
 
-            //ts += delay;
-            naluLength = inputStream.available()+1;
+            nalLength = inputStream.available()+1;
         }
 
         // Parses the NAL unit type
-        type = header[4]&0x1F;
+        type = header[4] & 0x1F;
 
         // The stream already contains NAL unit type 7 or 8, we don't need
         // to add them to the stream ourselves
         if (type == 7 || type == 8)
         {
             Log.v(TAG,"SPS or PPS present in the stream.");
+
             count++;
             if (count > 4)
             {
@@ -234,23 +224,22 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable
         {
             buffer = socket.requestBuffer();
             socket.markNextPacket();
-            socket.updateTimestamp(ts);
+            socket.updateTimestamp(timestamp);
             System.arraycopy(stapa, 0, buffer, rtpHeaderLength, stapa.length);
             super.send(rtpHeaderLength +stapa.length);
         }
 
         // Small NAL unit => Single NAL unit
-        if (naluLength <= MAXPACKETSIZE- rtpHeaderLength - 2)
+        if (nalLength <= MAXPACKETSIZE- rtpHeaderLength - 2)
         {
             buffer = socket.requestBuffer();
             buffer[rtpHeaderLength] = header[4];
-            len = fill(buffer, rtpHeaderLength + 1,  naluLength - 1);
-            socket.updateTimestamp(ts);
+            len = fill(buffer, rtpHeaderLength + 1,  nalLength - 1);
+            socket.updateTimestamp(timestamp);
             socket.markNextPacket();
-            super.send(naluLength + rtpHeaderLength);
+            super.send(nalLength + rtpHeaderLength);
         }
-        // Large NAL unit => Split nal unit
-        else
+        else // Large NAL unit => Split nal unit
         {
             // Set FU-A header
             header[1] = (byte) (header[4] & 0x1F);  // FU header type
@@ -260,13 +249,13 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable
             header[0] = (byte) ((header[4] & 0x60) & 0xFF); // FU indicator NRI
             header[0] += 28;
 
-            while (sum < naluLength)
+            while (sum < nalLength)
             {
                 buffer = socket.requestBuffer();
                 buffer[rtpHeaderLength] = header[0];
                 buffer[rtpHeaderLength + 1] = header[1];
-                socket.updateTimestamp(ts);
-                if ((len = fill(buffer, rtpHeaderLength + 2, naluLength - sum > MAXPACKETSIZE - rtpHeaderLength - 2 ? MAXPACKETSIZE - rtpHeaderLength - 2 : naluLength - sum)) < 0)
+                socket.updateTimestamp(timestamp);
+                if ((len = fill(buffer, rtpHeaderLength + 2, nalLength - sum > MAXPACKETSIZE - rtpHeaderLength - 2 ? MAXPACKETSIZE - rtpHeaderLength - 2 : nalLength - sum)) < 0)
                 {
                     return;
                 }
@@ -274,7 +263,7 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable
                 sum += len;
 
                 // Last packet before next NAL
-                if (sum >= naluLength)
+                if (sum >= nalLength)
                 {
                     // End bit on
                     buffer[rtpHeaderLength + 1] += 0x40;
@@ -291,7 +280,9 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable
 
     private int fill(byte[] buffer, int offset,int length) throws IOException
     {
-        int sum = 0, len;
+        int sum = 0;
+        int len;
+
         while (sum < length)
         {
             len = inputStream.read(buffer, offset + sum, length - sum);
@@ -310,7 +301,7 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable
     {
         int type;
 
-        Log.e(TAG,"Packetizer out of sync. Let's try to fix that... NAL length: " + naluLength);
+        Log.e(TAG,"Packetizer out of sync. Let's try to fix that... NAL length: " + nalLength);
 
         while (true)
         {
@@ -324,15 +315,15 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable
 
             if (type == 5 || type == 1)
             {
-                naluLength = header[3] & 0xFF | (header[2] & 0xFF) << 8 | (header[1] & 0xFF) << 16 | (header[0] & 0xFF) << 24;
-                if (naluLength > 0 && naluLength < 100000)
+                nalLength = header[3] & 0xFF | (header[2] & 0xFF) << 8 | (header[1] & 0xFF) << 16 | (header[0] & 0xFF) << 24;
+                if (nalLength > 0 && nalLength < 100000)
                 {
                     oldtime = System.nanoTime();
                     Log.e(TAG,"A NAL unit may have been found in the bit stream!");
                     break;
                 }
 
-                if (naluLength == 0)
+                if (nalLength == 0)
                 {
                     Log.e(TAG,"NAL unit with NULL size found...");
                 }

@@ -1,21 +1,3 @@
-/*
- * Copyright (C) 2011-2015 GUIGUI Simon, fyhertz@gmail.com
- *
- * This file is part of libstreaming (https://github.com/fyhertz/libstreaming)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package com.assortedsolutions.streaming.rtp;
 
 import java.io.IOException;
@@ -35,24 +17,24 @@ public class MediaCodecInputStream extends InputStream
 {
     public final String TAG = "MediaCodecInputStream";
 
-    private MediaCodec mMediaCodec = null;
-    private BufferInfo mBufferInfo = new BufferInfo();
-    private ByteBuffer[] mBuffers = null;
-    private ByteBuffer mBuffer = null;
-    private int mIndex = -1;
-    private boolean mClosed = false;
+    private MediaCodec mediaCodec = null;
+    private BufferInfo bufferInfo = new BufferInfo();
+    private ByteBuffer[] buffers = null;
+    private ByteBuffer buffer = null;
+    private int index = -1;
+    private boolean closed = false;
 
-    public MediaFormat mMediaFormat;
+    public MediaFormat mediaFormat;
 
     public MediaCodecInputStream(MediaCodec mediaCodec)
     {
-        mMediaCodec = mediaCodec;
-        mBuffers = mMediaCodec.getOutputBuffers();
+        this.mediaCodec = mediaCodec;
+        buffers = this.mediaCodec.getOutputBuffers();
     }
 
     @Override
     public void close() {
-        mClosed = true;
+        closed = true;
     }
 
     @Override
@@ -65,49 +47,49 @@ public class MediaCodecInputStream extends InputStream
 
         try
         {
-            if (mBuffer == null)
+            if (this.buffer == null)
             {
-                while (!Thread.interrupted() && !mClosed)
+                while (!Thread.interrupted() && !closed)
                 {
-                    mIndex = mMediaCodec.dequeueOutputBuffer(mBufferInfo, 500000);
+                    index = mediaCodec.dequeueOutputBuffer(bufferInfo, 500000);
 
-                    if (mIndex >= 0)
+                    if (index >= 0)
                     {
-                        mBuffer = mBuffers[mIndex];
-                        mBuffer.position(0);
+                        this.buffer = buffers[index];
+                        this.buffer.position(0);
                         break;
                     }
-                    else if (mIndex == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED)
+                    else if (index == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED)
                     {
-                        mBuffers = mMediaCodec.getOutputBuffers();
+                        buffers = mediaCodec.getOutputBuffers();
                     }
-                    else if (mIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED)
+                    else if (index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED)
                     {
-                        mMediaFormat = mMediaCodec.getOutputFormat();
-                        Log.i(TAG,mMediaFormat.toString());
+                        mediaFormat = mediaCodec.getOutputFormat();
+                        Log.i(TAG, mediaFormat.toString());
                     }
-                    else if (mIndex == MediaCodec.INFO_TRY_AGAIN_LATER)
+                    else if (index == MediaCodec.INFO_TRY_AGAIN_LATER)
                     {
                         Log.v(TAG,"No buffer available...");
                     }
                     else
                     {
-                        Log.e(TAG,"Message: " + mIndex);
+                        Log.e(TAG,"Message: " + index);
                     }
                 }
             }
 
-            if (mClosed)
+            if (closed)
             {
                 throw new IOException("This InputStream was closed");
             }
 
-            min = length < mBufferInfo.size - mBuffer.position() ? length : mBufferInfo.size - mBuffer.position();
-            mBuffer.get(buffer, offset, min);
-            if (mBuffer.position() >= mBufferInfo.size)
+            min = length < bufferInfo.size - this.buffer.position() ? length : bufferInfo.size - this.buffer.position();
+            this.buffer.get(buffer, offset, min);
+            if (this.buffer.position() >= bufferInfo.size)
             {
-                mMediaCodec.releaseOutputBuffer(mIndex, false);
-                mBuffer = null;
+                mediaCodec.releaseOutputBuffer(index, false);
+                this.buffer = null;
             }
         }
         catch (RuntimeException e)
@@ -120,9 +102,9 @@ public class MediaCodecInputStream extends InputStream
 
     public int available()
     {
-        if (mBuffer != null)
+        if (buffer != null)
         {
-            return mBufferInfo.size - mBuffer.position();
+            return bufferInfo.size - buffer.position();
         }
 
         return 0;
@@ -130,6 +112,6 @@ public class MediaCodecInputStream extends InputStream
 
     public BufferInfo getLastBufferInfo()
     {
-        return mBufferInfo;
+        return bufferInfo;
     }
 }

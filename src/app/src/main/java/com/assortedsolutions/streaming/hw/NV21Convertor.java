@@ -1,66 +1,56 @@
-/*
- * Copyright (C) 2011-2015 GUIGUI Simon, fyhertz@gmail.com
- *
- * This file is part of libstreaming (https://github.com/fyhertz/libstreaming)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package com.assortedsolutions.streaming.hw;
 
 import java.nio.ByteBuffer;
 import android.media.MediaCodecInfo;
-import android.util.Log;
 
 /**
  * Converts from NV21 to YUV420 semi planar or planar.
  */
 public class NV21Convertor
 {
-    private int mSliceHeight, mHeight;
-    private int mStride, mWidth;
-    private int mSize;
-    private boolean mPlanar, mPanesReversed = false;
-    private int mYPadding;
-    private byte[] mBuffer;
-    ByteBuffer mCopy;
+    private int sliceHeight;
+    private int height;
+    private int stride;
+    private int width;
+    private int size;
+    private boolean planar;
+    private boolean panesReversed = false;
+    private int yPadding;
+    private byte[] buffer;
 
     public void setSize(int width, int height)
     {
-        mHeight = height;
-        mWidth = width;
-        mSliceHeight = height;
-        mStride = width;
-        mSize = mWidth*mHeight;
+        this.height = height;
+        this.width = width;
+        sliceHeight = height;
+        stride = width;
+        size = this.width * this.height;
     }
 
-    public void setStride(int width) {
-        mStride = width;
+    public void setStride(int width)
+    {
+        stride = width;
     }
 
-    public void setSliceHeigth(int height) {
-        mSliceHeight = height;
+    public void setSliceHeigth(int height)
+    {
+        sliceHeight = height;
     }
 
-    public void setPlanar(boolean planar) {
-        mPlanar = planar;
+    public void setPlanar(boolean planar)
+    {
+        this.planar = planar;
     }
 
-    public void setYPadding(int padding) {
-        mYPadding = padding;
+    public void setYPadding(int padding)
+    {
+        yPadding = padding;
     }
 
-    public int getBufferSize() { return 3 * mSize / 2; }
+    public int getBufferSize()
+    {
+        return 3 * size / 2;
+    }
 
     public void setEncoderColorFormat(int colorFormat)
     {
@@ -78,28 +68,34 @@ public class NV21Convertor
         }
     }
 
-    public void setColorPanesReversed(boolean b) {
-        mPanesReversed = b;
+    public void setColorPanesReversed(boolean b)
+    {
+        panesReversed = b;
     }
 
-    public int getStride() {
-        return mStride;
+    public int getStride()
+    {
+        return stride;
     }
 
-    public int getSliceHeigth() {
-        return mSliceHeight;
+    public int getSliceHeigth()
+    {
+        return sliceHeight;
     }
 
-    public int getYPadding() {
-        return mYPadding;
+    public int getYPadding()
+    {
+        return yPadding;
     }
 
-    public boolean getPlanar() {
-        return mPlanar;
+    public boolean getPlanar()
+    {
+        return planar;
     }
 
-    public boolean getUVPanesReversed() {
-        return mPanesReversed;
+    public boolean getUVPanesReversed()
+    {
+        return panesReversed;
     }
 
     public void convert(byte[] data, ByteBuffer buffer)
@@ -112,31 +108,31 @@ public class NV21Convertor
     public byte[] convert(byte[] data)
     {
         // A buffer large enough for every case
-        if (mBuffer == null || mBuffer.length != 3 * mSliceHeight * mStride / 2 + mYPadding)
+        if (buffer == null || buffer.length != 3 * sliceHeight * stride / 2 + yPadding)
         {
-            mBuffer = new byte[3 * mSliceHeight * mStride / 2 + mYPadding];
+            buffer = new byte[3 * sliceHeight * stride / 2 + yPadding];
         }
 
-        if (!mPlanar)
+        if (!planar)
         {
-            if (mSliceHeight == mHeight && mStride == mWidth)
+            if (sliceHeight == height && stride == width)
             {
                 // Swaps U and V
-                if (!mPanesReversed)
+                if (!panesReversed)
                 {
-                    for (int i = mSize; i < mSize + mSize / 2; i += 2)
+                    for (int i = size; i < size + size / 2; i += 2)
                     {
-                        mBuffer[0] = data[i + 1];
+                        buffer[0] = data[i + 1];
                         data[i + 1] = data[i];
-                        data[i] = mBuffer[0];
+                        data[i] = buffer[0];
                     }
                 }
 
-                if (mYPadding > 0)
+                if (yPadding > 0)
                 {
-                    System.arraycopy(data, 0, mBuffer, 0, mSize);
-                    System.arraycopy(data, mSize, mBuffer, mSize + mYPadding, mSize / 2);
-                    return mBuffer;
+                    System.arraycopy(data, 0, buffer, 0, size);
+                    System.arraycopy(data, size, buffer, size + yPadding, size / 2);
+                    return buffer;
                 }
 
                 return data;
@@ -144,35 +140,35 @@ public class NV21Convertor
         }
         else
         {
-            if (mSliceHeight == mHeight && mStride == mWidth)
+            if (sliceHeight == height && stride == width)
             {
                 // De-interleave U and V
-                if (!mPanesReversed)
+                if (!panesReversed)
                 {
-                    for (int i = 0; i < mSize / 4; i += 1)
+                    for (int i = 0; i < size / 4; i += 1)
                     {
-                        mBuffer[i] = data[mSize + 2 * i + 1];
-                        mBuffer[mSize / 4 + i] = data[mSize + 2 * i];
+                        buffer[i] = data[size + 2 * i + 1];
+                        buffer[size / 4 + i] = data[size + 2 * i];
                     }
                 }
                 else
                 {
-                    for (int i = 0; i < mSize / 4; i += 1)
+                    for (int i = 0; i < size / 4; i += 1)
                     {
-                        mBuffer[i] = data[mSize + 2 * i];
-                        mBuffer[mSize / 4 + i] = data[mSize + 2 * i + 1];
+                        buffer[i] = data[size + 2 * i];
+                        buffer[size / 4 + i] = data[size + 2 * i + 1];
                     }
                 }
 
-                if (mYPadding == 0)
+                if (yPadding == 0)
                 {
-                    System.arraycopy(mBuffer, 0, data, mSize, mSize/2);
+                    System.arraycopy(buffer, 0, data, size, size /2);
                 }
                 else
                 {
-                    System.arraycopy(data, 0, mBuffer, 0, mSize);
-                    System.arraycopy(mBuffer, 0, mBuffer, mSize + mYPadding, mSize / 2);
-                    return mBuffer;
+                    System.arraycopy(data, 0, buffer, 0, size);
+                    System.arraycopy(buffer, 0, buffer, size + yPadding, size / 2);
+                    return buffer;
                 }
 
                 return data;

@@ -1,9 +1,9 @@
 package com.assortedsolutions.streaming.rtp;
 
 /** Computes the proper rate at which packets are sent. */
-class Statistics
+class RtpSocketStatistics
 {
-    public final static String TAG = "Statistics";
+    public final static String TAG = "RtpSocketStatistics";
 
     private int count = 500;
     private int c = 0;
@@ -15,7 +15,7 @@ class Statistics
     private long period = 6000000000L;
     private boolean initOffset = false;
 
-    public Statistics(int count, long period)
+    public RtpSocketStatistics(int count, long period)
     {
         this.count = count;
         this.period = period * 1000000L;

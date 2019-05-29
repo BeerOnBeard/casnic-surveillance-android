@@ -1,21 +1,3 @@
-/*
- * Copyright (C) 2011-2015 GUIGUI Simon, fyhertz@gmail.com
- *
- * This file is part of libstreaming (https://github.com/fyhertz/libstreaming)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package com.assortedsolutions.streaming.rtp;
 
 import java.io.IOException;
@@ -39,25 +21,22 @@ abstract public class AbstractPacketizer
     protected InputStream inputStream = null;
     protected byte[] buffer;
 
-    protected long ts = 0;
+    protected long timestamp = 0;
 
     public AbstractPacketizer()
     {
         int ssrc = new Random().nextInt();
-        ts = new Random().nextInt();
+        timestamp = new Random().nextInt();
         socket = new RtpSocket();
         socket.setSSRC(ssrc);
     }
 
-    public RtpSocket getRtpSocket() {
-        return socket;
-    }
+    public RtpSocket getRtpSocket() { return socket; }
 
-    public int getSSRC() {
-        return socket.getSSRC();
-    }
+    public int getSSRC() { return socket.getSSRC(); }
 
-    public void setInputStream(InputStream is) {
+    public void setInputStream(InputStream is)
+    {
         this.inputStream = is;
     }
 
@@ -87,74 +66,5 @@ abstract public class AbstractPacketizer
     protected void send(int length) throws IOException
     {
         socket.commitBuffer(length);
-    }
-
-    /** Used in packetizers to estimate timestamps in RTP packets. */
-    protected static class Statistics
-    {
-        public final static String TAG = "Statistics";
-
-        private int count=700, c = 0;
-        private float m = 0, q = 0;
-        private long elapsed = 0;
-        private long start = 0;
-        private long duration = 0;
-        private long period = 10000000000L;
-        private boolean initoffset = false;
-
-        public Statistics() {}
-
-        public void reset()
-        {
-            initoffset = false;
-            q = 0;
-            m = 0;
-            c = 0;
-            elapsed = 0;
-            start = 0;
-            duration = 0;
-        }
-
-        public void push(long value)
-        {
-            elapsed += value;
-            if (elapsed > period)
-            {
-                elapsed = 0;
-                long now = System.nanoTime();
-                if (!initoffset || (now - start < 0))
-                {
-                    start = now;
-                    duration = 0;
-                    initoffset = true;
-                }
-
-                // Prevents drifting issues by comparing the real duration of the
-                // stream with the sum of all temporal lengths of RTP packets.
-                value += (now - start) - duration;
-            }
-
-            if (c < 5)
-            {
-                // We ignore the first 20 measured values because they may not be accurate
-                c++;
-                m = value;
-            }
-            else
-            {
-                m = (m * q + value) / (q + 1);
-                if (q < count)
-                {
-                    q++;
-                }
-            }
-        }
-
-        public long average()
-        {
-            long l = (long)m;
-            duration += l;
-            return l;
-        }
     }
 }

@@ -1,21 +1,3 @@
-/*
- * Copyright (C) 2011-2015 GUIGUI Simon, fyhertz@gmail.com
- *
- * This file is part of libstreaming (https://github.com/fyhertz/libstreaming)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package com.assortedsolutions.streaming.audio;
 
 import java.io.IOException;
@@ -66,13 +48,13 @@ public class AACStream extends AudioStream
         -1,   // 15
     };
 
-    private String mSessionDescription = null;
-    private int mProfile;
-    private int mSamplingRateIndex;
-    private int mChannel;
-    private int mConfig;
-    private AudioRecord mAudioRecord = null;
-    private Thread mThread = null;
+    private String sessionDescription = null;
+    private int profile;
+    private int samplingRateIndex;
+    private int channel;
+    private int config;
+    private AudioRecord audioRecord = null;
+    private Thread thread = null;
 
     public AACStream()
     {
@@ -110,25 +92,27 @@ public class AACStream extends AudioStream
     @Override
     public synchronized void start() throws IllegalStateException, IOException
     {
-        if (!streaming)
+        if (streaming)
         {
-            configure();
-            super.start();
+            return;
         }
+
+        configure();
+        super.start();
     }
 
     public synchronized void configure() throws IllegalStateException, IOException
     {
         super.configure();
-        mQuality = mRequestedQuality.clone();
+        quality = requestedQuality.clone();
 
         // Checks if the user has supplied an exotic sampling rate
         int i = 0;
         for (; i < AUDIO_SAMPLING_RATES.length; i++)
         {
-            if (AUDIO_SAMPLING_RATES[i] == mQuality.samplingRate)
+            if (AUDIO_SAMPLING_RATES[i] == quality.samplingRate)
             {
-                mSamplingRateIndex = i;
+                samplingRateIndex = i;
                 break;
             }
         }
@@ -136,7 +120,7 @@ public class AACStream extends AudioStream
         // If he did, we force a reasonable one: 16 kHz
         if (i > 12)
         {
-            mQuality.samplingRate = 16000;
+            quality.samplingRate = 16000;
         }
 
         if (packetizer == null)
@@ -145,40 +129,47 @@ public class AACStream extends AudioStream
             packetizer.setDestination(destination, rtpPort, rtcpPort);
         }
 
-        mProfile = 2; // AAC LC
-        mChannel = 1;
-        mConfig = (mProfile & 0x1F) << 11 | (mSamplingRateIndex & 0x0F) << 7 | (mChannel & 0x0F) << 3;
+        profile = 2; // AAC LC
+        channel = 1;
+        config = (profile & 0x1F) << 11 | (samplingRateIndex & 0x0F) << 7 | (channel & 0x0F) << 3;
 
-        mSessionDescription = "m=audio " + getDestinationPorts()[0] + " RTP/AVP 96\r\n" +
-                "a=rtpmap:96 mpeg4-generic/" + mQuality.samplingRate + "\r\n" +
-                "a=fmtp:96 streamtype=5; profile-level-id=15; mode=AAC-hbr; config=" + Integer.toHexString(mConfig) +
-                "; SizeLength=13; IndexLength=3; IndexDeltaLength=3;\r\n";
+        sessionDescription = new StringBuilder()
+            .append("m=audio ")
+            .append(getDestinationPorts()[0])
+            .append(" RTP/AVP 96\r\n")
+            .append("a=rtpmap:96 mpeg4-generic/")
+            .append(quality.samplingRate)
+            .append("\r\n")
+            .append("a=fmtp:96 streamtype=5; profile-level-id=15; mode=AAC-hbr; config=")
+            .append(Integer.toHexString(config))
+            .append("; SizeLength=13; IndexLength=3; IndexDeltaLength=3;\r\n")
+            .toString();
     }
 
     @Override
     protected void encodeWithMediaCodec() throws IOException
     {
-        final int bufferSize = AudioRecord.getMinBufferSize(mQuality.samplingRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT) * 2;
+        final int bufferSize = AudioRecord.getMinBufferSize(quality.samplingRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT) * 2;
 
-        ((AACLATMPacketizer) packetizer).setSamplingRate(mQuality.samplingRate);
+        ((AACLATMPacketizer) packetizer).setSamplingRate(quality.samplingRate);
 
-        mAudioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC, mQuality.samplingRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, bufferSize);
+        audioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC, quality.samplingRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, bufferSize);
         mediaCodec = MediaCodec.createEncoderByType("audio/mp4a-latm");
         MediaFormat format = new MediaFormat();
         format.setString(MediaFormat.KEY_MIME, "audio/mp4a-latm");
-        format.setInteger(MediaFormat.KEY_BIT_RATE, mQuality.bitRate);
+        format.setInteger(MediaFormat.KEY_BIT_RATE, quality.bitRate);
         format.setInteger(MediaFormat.KEY_CHANNEL_COUNT, 1);
-        format.setInteger(MediaFormat.KEY_SAMPLE_RATE, mQuality.samplingRate);
+        format.setInteger(MediaFormat.KEY_SAMPLE_RATE, quality.samplingRate);
         format.setInteger(MediaFormat.KEY_AAC_PROFILE, MediaCodecInfo.CodecProfileLevel.AACObjectLC);
         format.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, bufferSize);
         mediaCodec.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
-        mAudioRecord.startRecording();
+        audioRecord.startRecording();
         mediaCodec.start();
 
         final MediaCodecInputStream inputStream = new MediaCodecInputStream(mediaCodec);
         final ByteBuffer[] inputBuffers = mediaCodec.getInputBuffers();
 
-        mThread = new Thread(new Runnable() {
+        thread = new Thread(new Runnable() {
             @Override
             public void run() {
             int len = 0;
@@ -193,7 +184,7 @@ public class AACStream extends AudioStream
                     if (bufferIndex >= 0)
                     {
                         inputBuffers[bufferIndex].clear();
-                        len = mAudioRecord.read(inputBuffers[bufferIndex], bufferSize);
+                        len = audioRecord.read(inputBuffers[bufferIndex], bufferSize);
 
                         if (len ==  AudioRecord.ERROR_INVALID_OPERATION || len == AudioRecord.ERROR_BAD_VALUE)
                         {
@@ -213,7 +204,7 @@ public class AACStream extends AudioStream
             }
         });
 
-        mThread.start();
+        thread.start();
 
         // The packetizer encapsulates this stream in an RTP stream and send it over the network
         packetizer.setInputStream(inputStream);
@@ -225,16 +216,18 @@ public class AACStream extends AudioStream
     /** Stops the stream. */
     public synchronized void stop()
     {
-        if (streaming)
+        if (!streaming)
         {
-            Log.d(TAG, "Interrupting threads...");
-            mThread.interrupt();
-            mAudioRecord.stop();
-            mAudioRecord.release();
-            mAudioRecord = null;
-
-            super.stop();
+            return;
         }
+
+        Log.d(TAG, "Interrupting threads...");
+        thread.interrupt();
+        audioRecord.stop();
+        audioRecord.release();
+        audioRecord = null;
+
+        super.stop();
     }
 
     /**
@@ -243,11 +236,11 @@ public class AACStream extends AudioStream
      */
     public String getSessionDescription() throws IllegalStateException
     {
-        if (mSessionDescription == null)
+        if (sessionDescription == null)
         {
             throw new IllegalStateException("You need to call configure() first!");
         }
 
-        return mSessionDescription;
+        return sessionDescription;
     }
 }

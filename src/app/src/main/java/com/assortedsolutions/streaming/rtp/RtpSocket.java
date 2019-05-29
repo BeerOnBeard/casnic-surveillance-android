@@ -1,21 +1,3 @@
-/*
- * Copyright (C) 2011-2015 GUIGUI Simon, fyhertz@gmail.com
- *
- * This file is part of libstreaming (https://github.com/fyhertz/libstreaming)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package com.assortedsolutions.streaming.rtp;
 
 import java.io.IOException;
@@ -54,7 +36,7 @@ public class RtpSocket implements Runnable
 
     private SenderReport senderReport;
 
-    private Semaphore bufferRequesteed;
+    private Semaphore bufferRequested;
     private Semaphore bufferCommitted;
     private Thread thread;
 
@@ -129,7 +111,7 @@ public class RtpSocket implements Runnable
         bufferIn = 0;
         bufferOut = 0;
         timestamps = new long[bufferCount];
-        bufferRequesteed = new Semaphore(bufferCount);
+        bufferRequested = new Semaphore(bufferCount);
         bufferCommitted = new Semaphore(0);
         senderReport.reset();
         averageBitrate.reset();
@@ -205,7 +187,7 @@ public class RtpSocket implements Runnable
      **/
     public byte[] requestBuffer() throws InterruptedException
     {
-        bufferRequesteed.acquire();
+        bufferRequested.acquire();
         buffers[bufferIn][1] &= 0x7F;
         return buffers[bufferIn];
     }
@@ -281,7 +263,7 @@ public class RtpSocket implements Runnable
     @Override
     public void run()
     {
-        Statistics stats = new Statistics(50,3000);
+        RtpSocketStatistics stats = new RtpSocketStatistics(50,3000);
         try
         {
             // Caches cacheSize milliseconds of the stream in the FIFO.
@@ -335,7 +317,7 @@ public class RtpSocket implements Runnable
                     bufferOut = 0;
                 }
 
-                bufferRequesteed.release();
+                bufferRequested.release();
             }
         }
         catch (Exception e)

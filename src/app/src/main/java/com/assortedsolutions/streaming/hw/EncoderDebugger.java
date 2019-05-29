@@ -1,21 +1,3 @@
-/*
- * Copyright (C) 2011-2015 GUIGUI Simon, fyhertz@gmail.com
- *
- * This file is part of libstreaming (https://github.com/fyhertz/libstreaming)
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package com.assortedsolutions.streaming.hw;
 
 import java.io.IOException;
@@ -77,17 +59,27 @@ public class EncoderDebugger
     private final static int NB_DECODED = 34;
     private final static int NB_ENCODED = 50;
 
-    private int mDecoderColorFormat, mEncoderColorFormat;
-    private String mDecoderName, mEncoderName, mErrorLog;
-    private MediaCodec mEncoder, mDecoder;
-    private int mWidth, mHeight, mSize;
-    private byte[] mSPS, mPPS;
-    private byte[] mData, mInitialImage;
-    private MediaFormat mDecOutputFormat;
-    private NV21Convertor mNV21;
-    private SharedPreferences mPreferences;
-    private byte[][] mVideo, mDecodedVideo;
-    private String mB64PPS, mB64SPS;
+    private int decoderColorFormat;
+    private int encoderColorFormat;
+    private String decoderName;
+    private String encoderName;
+    private String errorLog;
+    private MediaCodec encoder;
+    private MediaCodec decoder;
+    private int width;
+    private int height;
+    private int size;
+    private byte[] SPS;
+    private byte[] PPS;
+    private byte[] data;
+    private byte[] initialImage;
+    private MediaFormat decOutputFormat;
+    private NV21Convertor nv21Convertor;
+    private SharedPreferences preferences;
+    private byte[][] video;
+    private byte[][] decodedVideo;
+    private String base64PPS;
+    private String base64SPS;
 
     public synchronized static void asyncDebug(final Context context, final int width, final int height)
     {
@@ -120,49 +112,55 @@ public class EncoderDebugger
         return debugger;
     }
 
-    public String getB64PPS() {
-        return mB64PPS;
+    public String getBase64PPS()
+    {
+        return base64PPS;
     }
 
-    public String getB64SPS() {
-        return mB64SPS;
+    public String getBase64SPS()
+    {
+        return base64SPS;
     }
 
-    public String getEncoderName() {
-        return mEncoderName;
+    public String getEncoderName()
+    {
+        return encoderName;
     }
 
-    public int getEncoderColorFormat() {
-        return mEncoderColorFormat;
+    public int getEncoderColorFormat()
+    {
+        return encoderColorFormat;
     }
 
     /** This {@link NV21Convertor} will do the necessary work to feed properly the encoder. */
-    public NV21Convertor getNV21Convertor() {
-        return mNV21;
+    public NV21Convertor getNV21Convertor()
+    {
+        return nv21Convertor;
     }
 
     /** A log of all the errors that occurred during the test. */
-    public String getErrorLog() {
-        return mErrorLog;
+    public String getErrorLog()
+    {
+        return errorLog;
     }
 
     private EncoderDebugger(SharedPreferences prefs, int width, int height)
     {
-        mPreferences = prefs;
-        mWidth = width;
-        mHeight = height;
-        mSize = width*height;
+        preferences = prefs;
+        this.width = width;
+        this.height = height;
+        size = width*height;
         reset();
     }
 
     private void reset()
     {
-        mNV21 = new NV21Convertor();
-        mVideo = new byte[NB_ENCODED][];
-        mDecodedVideo = new byte[NB_DECODED][];
-        mErrorLog = "";
-        mPPS = null;
-        mSPS = null;
+        nv21Convertor = new NV21Convertor();
+        video = new byte[NB_ENCODED][];
+        decodedVideo = new byte[NB_DECODED][];
+        errorLog = "";
+        PPS = null;
+        SPS = null;
     }
 
     private void debug()
@@ -171,69 +169,64 @@ public class EncoderDebugger
         // we just restore the result from the shared preferences
         if (!checkTestNeeded())
         {
-            String resolution = mWidth + "x" + mHeight + "-";
+            String resolution = width + "x" + height + "-";
 
-            boolean success = mPreferences.getBoolean(PREF_PREFIX + resolution + "success",false);
+            boolean success = preferences.getBoolean(PREF_PREFIX + resolution + "success",false);
             if (!success)
             {
-                throw new RuntimeException("Phone not supported with this resolution (" + mWidth + "x" + mHeight + ")");
+                throw new RuntimeException("Phone not supported with this resolution (" + width + "x" + height + ")");
             }
 
-            mNV21.setSize(mWidth, mHeight);
-            mNV21.setSliceHeigth(mPreferences.getInt(PREF_PREFIX + resolution + "sliceHeight", 0));
-            mNV21.setStride(mPreferences.getInt(PREF_PREFIX + resolution + "stride", 0));
-            mNV21.setYPadding(mPreferences.getInt(PREF_PREFIX + resolution + "padding", 0));
-            mNV21.setPlanar(mPreferences.getBoolean(PREF_PREFIX + resolution + "planar", false));
-            mNV21.setColorPanesReversed(mPreferences.getBoolean(PREF_PREFIX + resolution + "reversed", false));
-            mEncoderName = mPreferences.getString(PREF_PREFIX + resolution + "encoderName", "");
-            mEncoderColorFormat = mPreferences.getInt(PREF_PREFIX + resolution + "colorFormat", 0);
-            mB64PPS = mPreferences.getString(PREF_PREFIX + resolution + "pps", "");
-            mB64SPS = mPreferences.getString(PREF_PREFIX + resolution + "sps", "");
+            nv21Convertor.setSize(width, height);
+            nv21Convertor.setSliceHeigth(preferences.getInt(PREF_PREFIX + resolution + "sliceHeight", 0));
+            nv21Convertor.setStride(preferences.getInt(PREF_PREFIX + resolution + "stride", 0));
+            nv21Convertor.setYPadding(preferences.getInt(PREF_PREFIX + resolution + "padding", 0));
+            nv21Convertor.setPlanar(preferences.getBoolean(PREF_PREFIX + resolution + "planar", false));
+            nv21Convertor.setColorPanesReversed(preferences.getBoolean(PREF_PREFIX + resolution + "reversed", false));
+            encoderName = preferences.getString(PREF_PREFIX + resolution + "encoderName", "");
+            encoderColorFormat = preferences.getInt(PREF_PREFIX + resolution + "colorFormat", 0);
+            base64PPS = preferences.getString(PREF_PREFIX + resolution + "pps", "");
+            base64SPS = preferences.getString(PREF_PREFIX + resolution + "sps", "");
 
             return;
         }
 
-        if (VERBOSE)
-        {
-            Log.d(TAG, ">>>> Testing the phone for resolution " + mWidth + "x" + mHeight);
-        }
+        Log.d(TAG, ">>>> Testing the phone for resolution " + width + "x" + height);
 
         // Builds a list of available encoders and decoders we may be able to use
         // because they support some nice color formats
         Codec[] encoders = CodecManager.findEncodersForMimeType(MIME_TYPE);
         Codec[] decoders = CodecManager.findDecodersForMimeType(MIME_TYPE);
 
-        int count = 0, n = 1;
-        for (int i = 0; i < encoders.length; i++)
+        int count = 0;
+        int n = 1;
+        for (Codec encoder1 : encoders)
         {
-            count += encoders[i].formats.length;
+            count += encoder1.formats.length;
         }
 
         // Tries available encoders
-        for (int i = 0; i < encoders.length; i++)
+        for (Codec encoder1 : encoders)
         {
-            for (int j = 0; j < encoders[i].formats.length; j++)
+            for (int j = 0; j < encoder1.formats.length; j++)
             {
                 reset();
 
-                mEncoderName = encoders[i].name;
-                mEncoderColorFormat = encoders[i].formats[j];
+                encoderName = encoder1.name;
+                encoderColorFormat = encoder1.formats[j];
 
-                if (VERBOSE)
-                {
-                    Log.v(TAG, ">> Test " + (n++) + "/" + count + ": " + mEncoderName + " with color format " + mEncoderColorFormat + " at " + mWidth + "x" + mHeight);
-                }
+                Log.v(TAG, ">> Test " + (n++) + "/" + count + ": " + encoderName + " with color format " + encoderColorFormat + " at " + width + "x" + height);
 
                 // Converts from NV21 to YUV420 with the specified parameters
-                mNV21.setSize(mWidth, mHeight);
-                mNV21.setSliceHeigth(mHeight);
-                mNV21.setStride(mWidth);
-                mNV21.setYPadding(0);
-                mNV21.setEncoderColorFormat(mEncoderColorFormat);
+                nv21Convertor.setSize(width, height);
+                nv21Convertor.setSliceHeigth(height);
+                nv21Convertor.setStride(width);
+                nv21Convertor.setYPadding(0);
+                nv21Convertor.setEncoderColorFormat(encoderColorFormat);
 
                 // /!\ NV21Convertor can directly modify the input
                 createTestImage();
-                mData = mNV21.convert(mInitialImage);
+                data = nv21Convertor.convert(initialImage);
 
                 try
                 {
@@ -241,10 +234,7 @@ public class EncoderDebugger
                     configureEncoder();
                     searchSPSandPPS();
 
-                    if (VERBOSE)
-                    {
-                        Log.v(TAG, "SPS and PPS in b64: SPS=" + mB64SPS + ", PPS=" + mB64PPS);
-                    }
+                    Log.v(TAG, "SPS and PPS in b64: SPS=" + base64SPS + ", PPS=" + base64PPS);
 
                     // Feeds the encoder with an image repeatedly to produce some NAL units
                     encode();
@@ -255,18 +245,14 @@ public class EncoderDebugger
                     {
                         for (int l = 0; l < decoders[k].formats.length && !decoded; l++)
                         {
-                            mDecoderName = decoders[k].name;
-                            mDecoderColorFormat = decoders[k].formats[l];
+                            decoderName = decoders[k].name;
+                            decoderColorFormat = decoders[k].formats[l];
                             try
                             {
                                 configureDecoder();
-                            }
-                            catch (Exception e)
+                            } catch (Exception e)
                             {
-                                if (VERBOSE)
-                                {
-                                    Log.d(TAG, mDecoderName + " can't be used with " + mDecoderColorFormat + " at " + mWidth + "x" + mHeight, e);
-                                }
+                                Log.d(TAG, decoderName + " can't be used with " + decoderColorFormat + " at " + width + "x" + height, e);
 
                                 releaseDecoder();
                                 break;
@@ -275,19 +261,13 @@ public class EncoderDebugger
                             try
                             {
                                 decode(true);
-                                if (VERBOSE)
-                                {
-                                    Log.d(TAG, mDecoderName + " successfully decoded the NALs (color format " + mDecoderColorFormat + ")");
-                                }
+                                Log.d(TAG, decoderName + " successfully decoded the NALs (color format " + decoderColorFormat + ")");
 
                                 decoded = true;
                             }
                             catch (Exception e)
                             {
-                                if (VERBOSE)
-                                {
-                                    Log.e(TAG, mDecoderName + " failed to decode the NALs", e);
-                                }
+                                Log.e(TAG, decoderName + " failed to decode the NALs", e);
                             }
                             finally
                             {
@@ -306,7 +286,7 @@ public class EncoderDebugger
                     {
                         // TODO: try again with a different stride
                         // TODO: try again with the "stride" param
-                        throw new RuntimeException("It is likely that stride!=width");
+                        throw new RuntimeException("It is likely that stride != width");
                     }
 
                     int padding;
@@ -314,14 +294,11 @@ public class EncoderDebugger
                     {
                         if (padding < 4096)
                         {
-                            if (VERBOSE)
-                            {
-                                Log.d(TAG, "Some padding is needed: " + padding);
-                            }
+                            Log.d(TAG, "Some padding is needed: " + padding);
 
-                            mNV21.setYPadding(padding);
+                            nv21Convertor.setYPadding(padding);
                             createTestImage();
-                            mData = mNV21.convert(mInitialImage);
+                            data = nv21Convertor.convert(initialImage);
                             encodeDecode();
                         }
                         else
@@ -337,7 +314,7 @@ public class EncoderDebugger
                     {
                         if (compareChromaPanes(true))
                         {
-                            mNV21.setColorPanesReversed(true);
+                            nv21Convertor.setColorPanesReversed(true);
                             Log.d(TAG, "U and V pane are reversed");
                         }
                         else
@@ -347,17 +324,18 @@ public class EncoderDebugger
                     }
 
                     saveTestResult(true);
-                    Log.v(TAG, "The encoder " + mEncoderName + " is usable with resolution " + mWidth + "x" + mHeight);
+                    Log.v(TAG, "The encoder " + encoderName + " is usable with resolution " + width + "x" + height);
                     return;
                 }
                 catch (Exception e)
                 {
                     StringWriter sw = new StringWriter();
-                    PrintWriter pw = new PrintWriter(sw); e.printStackTrace(pw);
+                    PrintWriter pw = new PrintWriter(sw);
+                    e.printStackTrace(pw);
                     String stack = sw.toString();
-                    String str = "Encoder " + mEncoderName + " cannot be used with color format " + mEncoderColorFormat;
+                    String str = "Encoder " + encoderName + " cannot be used with color format " + encoderColorFormat;
                     Log.e(TAG, str, e);
-                    mErrorLog += str + "\n" + stack;
+                    errorLog += str + "\n" + stack;
                 }
                 finally
                 {
@@ -367,37 +345,32 @@ public class EncoderDebugger
         }
 
         saveTestResult(false);
-        Log.e(TAG,"No usable encoder were found on the phone for resolution " + mWidth + "x" + mHeight);
-        throw new RuntimeException("No usable encoder were found on the phone for resolution " + mWidth + "x" + mHeight);
+        Log.e(TAG,"No usable encoder were found on the phone for resolution " + width + "x" + height);
+        throw new RuntimeException("No usable encoder were found on the phone for resolution " + width + "x" + height);
     }
 
     private boolean checkTestNeeded()
     {
-        String resolution = mWidth + "x" + mHeight + "-";
+        String resolution = width + "x" + height + "-";
 
         // Forces the test
-        if (DEBUG || mPreferences==null)
+        if (DEBUG || preferences ==null)
         {
             return true;
         }
 
         // If the sdk has changed on the phone, or the version of the test
         // it has to be run again
-        if (mPreferences.contains(PREF_PREFIX + resolution + "lastSdk"))
+        if (preferences.contains(PREF_PREFIX + resolution + "lastSdk"))
         {
-            int lastSdk = mPreferences.getInt(PREF_PREFIX + resolution + "lastSdk", 0);
-            int lastVersion = mPreferences.getInt(PREF_PREFIX + resolution + "lastVersion", 0);
-            if (Build.VERSION.SDK_INT > lastSdk || VERSION > lastVersion)
-            {
-                return true;
-            }
+            int lastSdk = preferences.getInt(PREF_PREFIX + resolution + "lastSdk", 0);
+            int lastVersion = preferences.getInt(PREF_PREFIX + resolution + "lastVersion", 0);
+            return Build.VERSION.SDK_INT > lastSdk || VERSION > lastVersion;
         }
         else
         {
             return true;
         }
-
-        return false;
     }
 
 
@@ -408,8 +381,8 @@ public class EncoderDebugger
      */
     private void saveTestResult(boolean success)
     {
-        String resolution = mWidth + "x" + mHeight + "-";
-        Editor editor = mPreferences.edit();
+        String resolution = width + "x" + height + "-";
+        Editor editor = preferences.edit();
 
         editor.putBoolean(PREF_PREFIX + resolution + "success", success);
 
@@ -417,19 +390,19 @@ public class EncoderDebugger
         {
             editor.putInt(PREF_PREFIX + resolution + "lastSdk", Build.VERSION.SDK_INT);
             editor.putInt(PREF_PREFIX + resolution + "lastVersion", VERSION);
-            editor.putInt(PREF_PREFIX + resolution + "sliceHeight", mNV21.getSliceHeigth());
-            editor.putInt(PREF_PREFIX + resolution + "stride", mNV21.getStride());
-            editor.putInt(PREF_PREFIX + resolution + "padding", mNV21.getYPadding());
-            editor.putBoolean(PREF_PREFIX + resolution + "planar", mNV21.getPlanar());
-            editor.putBoolean(PREF_PREFIX + resolution + "reversed", mNV21.getUVPanesReversed());
-            editor.putString(PREF_PREFIX + resolution + "encoderName", mEncoderName);
-            editor.putInt(PREF_PREFIX + resolution + "colorFormat", mEncoderColorFormat);
-            editor.putString(PREF_PREFIX + resolution + "encoderName", mEncoderName);
-            editor.putString(PREF_PREFIX + resolution + "pps", mB64PPS);
-            editor.putString(PREF_PREFIX + resolution + "sps", mB64SPS);
+            editor.putInt(PREF_PREFIX + resolution + "sliceHeight", nv21Convertor.getSliceHeigth());
+            editor.putInt(PREF_PREFIX + resolution + "stride", nv21Convertor.getStride());
+            editor.putInt(PREF_PREFIX + resolution + "padding", nv21Convertor.getYPadding());
+            editor.putBoolean(PREF_PREFIX + resolution + "planar", nv21Convertor.getPlanar());
+            editor.putBoolean(PREF_PREFIX + resolution + "reversed", nv21Convertor.getUVPanesReversed());
+            editor.putString(PREF_PREFIX + resolution + "encoderName", encoderName);
+            editor.putInt(PREF_PREFIX + resolution + "colorFormat", encoderColorFormat);
+            editor.putString(PREF_PREFIX + resolution + "encoderName", encoderName);
+            editor.putString(PREF_PREFIX + resolution + "pps", base64PPS);
+            editor.putString(PREF_PREFIX + resolution + "sps", base64SPS);
         }
 
-        editor.commit();
+        editor.apply();
     }
 
     /**
@@ -437,16 +410,16 @@ public class EncoderDebugger
      */
     private void createTestImage()
     {
-        mInitialImage = new byte[3 * mSize / 2];
-        for (int i = 0; i < mSize; i++)
+        initialImage = new byte[3 * size / 2];
+        for (int i = 0; i < size; i++)
         {
-            mInitialImage[i] = (byte) (40 + i % 199);
+            initialImage[i] = (byte) (40 + i % 199);
         }
 
-        for (int i = mSize; i < 3 * mSize / 2; i += 2)
+        for (int i = size; i < 3 * size / 2; i += 2)
         {
-            mInitialImage[i] = (byte) (40 + i % 200);
-            mInitialImage[i + 1] = (byte) (40 + (i + 99) % 200);
+            initialImage[i] = (byte) (40 + i % 200);
+            initialImage[i + 1] = (byte) (40 + (i + 99) % 200);
         }
     }
 
@@ -456,18 +429,21 @@ public class EncoderDebugger
      */
     private boolean compareLumaPanes()
     {
-        int d, e, f = 0;
+        int d;
+        int e;
+        int f = 0;
+
         for (int j = 0; j < NB_DECODED; j++)
         {
-            for (int i = 0; i < mSize; i += 10)
+            for (int i = 0; i < size; i += 10)
             {
-                d = (mInitialImage[i] & 0xFF) - (mDecodedVideo[j][i] & 0xFF);
-                e = (mInitialImage[i + 1] & 0xFF) - (mDecodedVideo[j][i + 1] & 0xFF);
+                d = (initialImage[i] & 0xFF) - (decodedVideo[j][i] & 0xFF);
+                e = (initialImage[i + 1] & 0xFF) - (decodedVideo[j][i + 1] & 0xFF);
                 d = d < 0 ? -d : d;
                 e = e < 0 ? -e : e;
                 if (d > 50 && e > 50)
                 {
-                    mDecodedVideo[j] = null;
+                    decodedVideo[j] = null;
                     f++;
                     break;
                 }
@@ -479,14 +455,17 @@ public class EncoderDebugger
 
     private int checkPaddingNeeded()
     {
-        int i = 0, j = 3 * mSize / 2 - 1, max = 0;
+        int i = 0;
+        int j = 3 * size / 2 - 1;
+        int max = 0;
         int[] r = new int[NB_DECODED];
+
         for (int k = 0; k < NB_DECODED; k++)
         {
-            if (mDecodedVideo[k] != null)
+            if (decodedVideo[k] != null)
             {
                 i = 0;
-                while (i < j && (mDecodedVideo[k][j - i] & 0xFF) < 50)
+                while (i < j && (decodedVideo[k][j - i] & 0xFF) < 50)
                 {
                     i+=2;
                 }
@@ -513,22 +492,22 @@ public class EncoderDebugger
      */
     private boolean compareChromaPanes(boolean crossed)
     {
-        int d, f = 0;
+        int d;
+        int f = 0;
 
         for (int j = 0; j < NB_DECODED; j++)
         {
-            if (mDecodedVideo[j] != null)
+            if (decodedVideo[j] != null)
             {
                 // We compare the U and V pane before and after
                 if (!crossed)
                 {
-                    for (int i = mSize; i < 3 * mSize / 2; i += 1)
+                    for (int i = size; i < 3 * size / 2; i += 1)
                     {
-                        d = (mInitialImage[i] & 0xFF) - (mDecodedVideo[j][i] & 0xFF);
+                        d = (initialImage[i] & 0xFF) - (decodedVideo[j][i] & 0xFF);
                         d = d < 0 ? -d : d;
                         if (d > 50)
                         {
-                            //if (VERBOSE) Log.e(TAG,"BUG "+(i-mSize)+" d "+d);
                             f++;
                             break;
                         }
@@ -538,9 +517,9 @@ public class EncoderDebugger
                 }
                 else
                 {
-                    for (int i = mSize; i < 3 * mSize / 2; i += 2)
+                    for (int i = size; i < 3 * size / 2; i += 2)
                     {
-                        d = (mInitialImage[i] & 0xFF) - (mDecodedVideo[j][i + 1] & 0xFF);
+                        d = (initialImage[i] & 0xFF) - (decodedVideo[j][i + 1] & 0xFF);
                         d = d < 0 ? -d : d;
                         if (d > 50)
                         {
@@ -559,32 +538,33 @@ public class EncoderDebugger
      */
     private void convertToNV21(int k)
     {
-        byte[] buffer = new byte[3 * mSize / 2];
+        byte[] buffer = new byte[3 * size / 2];
 
-        int stride = mWidth, sliceHeight = mHeight;
-        int colorFormat = mDecoderColorFormat;
+        int stride = width;
+        int sliceHeight = height;
+        int colorFormat = decoderColorFormat;
         boolean planar = false;
 
-        if (mDecOutputFormat != null)
+        if (decOutputFormat != null)
         {
-            MediaFormat format = mDecOutputFormat;
+            MediaFormat format = decOutputFormat;
             if (format != null)
             {
                 if (format.containsKey("slice-height"))
                 {
                     sliceHeight = format.getInteger("slice-height");
-                    if (sliceHeight < mHeight)
+                    if (sliceHeight < height)
                     {
-                        sliceHeight = mHeight;
+                        sliceHeight = height;
                     }
                 }
 
                 if (format.containsKey("stride"))
                 {
                     stride = format.getInteger("stride");
-                    if (stride < mWidth)
+                    if (stride < width)
                     {
-                        stride = mWidth;
+                        stride = width;
                     }
                 }
 
@@ -608,44 +588,44 @@ public class EncoderDebugger
                 break;
         }
 
-        for (int i = 0; i < mSize; i++)
+        for (int i = 0; i < size; i++)
         {
-            if (i % mWidth == 0)
+            if (i % width == 0)
             {
-                i += stride - mWidth;
+                i += stride - width;
             }
 
-            buffer[i] = mDecodedVideo[k][i];
+            buffer[i] = decodedVideo[k][i];
         }
 
         if (!planar)
         {
-            for (int i = 0, j = 0; j < mSize / 4; i += 1, j += 1)
+            for (int i = 0, j = 0; j < size / 4; i += 1, j += 1)
             {
-                if (i % mWidth / 2 == 0)
+                if (i % width / 2 == 0)
                 {
-                    i += (stride - mWidth) / 2;
+                    i += (stride - width) / 2;
                 }
 
-                buffer[mSize + 2 * j + 1] = mDecodedVideo[k][stride * sliceHeight + 2 * i];
-                buffer[mSize + 2 * j] = mDecodedVideo[k][stride * sliceHeight + 2 * i + 1];
+                buffer[size + 2 * j + 1] = decodedVideo[k][stride * sliceHeight + 2 * i];
+                buffer[size + 2 * j] = decodedVideo[k][stride * sliceHeight + 2 * i + 1];
             }
         }
         else
         {
-            for (int i = 0, j = 0; j < mSize / 4; i += 1, j += 1)
+            for (int i = 0, j = 0; j < size / 4; i += 1, j += 1)
             {
-                if (i % mWidth / 2 == 0)
+                if (i % width / 2 == 0)
                 {
-                    i += (stride - mWidth) / 2;
+                    i += (stride - width) / 2;
                 }
 
-                buffer[mSize + 2 * j + 1] = mDecodedVideo[k][stride * sliceHeight + i];
-                buffer[mSize + 2 * j] = mDecodedVideo[k][stride * sliceHeight * 5 / 4 + i];
+                buffer[size + 2 * j + 1] = decodedVideo[k][stride * sliceHeight + i];
+                buffer[size + 2 * j] = decodedVideo[k][stride * sliceHeight * 5 / 4 + i];
             }
         }
 
-        mDecodedVideo[k] = buffer;
+        decodedVideo[k] = buffer;
     }
 
     /**
@@ -654,36 +634,39 @@ public class EncoderDebugger
      */
     private void configureEncoder() throws IOException
     {
-        mEncoder = MediaCodec.createByCodecName(mEncoderName);
-        MediaFormat mediaFormat = MediaFormat.createVideoFormat(MIME_TYPE, mWidth, mHeight);
+        encoder = MediaCodec.createByCodecName(encoderName);
+        MediaFormat mediaFormat = MediaFormat.createVideoFormat(MIME_TYPE, width, height);
         mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, BITRATE);
         mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, FRAMERATE);
-        mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, mEncoderColorFormat);
+        mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, encoderColorFormat);
         mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
-        mEncoder.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
-        mEncoder.start();
+        encoder.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
+        encoder.start();
     }
 
     private void releaseEncoder()
     {
-        if (mEncoder != null) {
-            try
-            {
-                mEncoder.stop();
-            }
-            catch (Exception ignore)
-            {
-                Log.e(TAG, "Stopping encoder threw", ignore);
-            }
+        if (encoder == null)
+        {
+            return;
+        }
 
-            try
-            {
-                mEncoder.release();
-            }
-            catch (Exception ignore)
-            {
-                Log.e(TAG, "Releasing encoder threw", ignore);
-            }
+        try
+        {
+            encoder.stop();
+        }
+        catch (Exception ignore)
+        {
+            Log.e(TAG, "Stopping encoder threw", ignore);
+        }
+
+        try
+        {
+            encoder.release();
+        }
+        catch (Exception ignore)
+        {
+            Log.e(TAG, "Releasing encoder threw", ignore);
         }
     }
 
@@ -695,41 +678,41 @@ public class EncoderDebugger
     {
         byte[] prefix = new byte[] { 0x00, 0x00, 0x00, 0x01 };
 
-        ByteBuffer csd0 = ByteBuffer.allocate(4 + mSPS.length + 4 + mPPS.length);
+        ByteBuffer csd0 = ByteBuffer.allocate(4 + SPS.length + 4 + PPS.length);
         csd0.put(new byte[] { 0x00, 0x00, 0x00, 0x01 });
-        csd0.put(mSPS);
+        csd0.put(SPS);
         csd0.put(new byte[] { 0x00, 0x00, 0x00, 0x01 });
-        csd0.put(mPPS);
+        csd0.put(PPS);
 
-        mDecoder = MediaCodec.createByCodecName(mDecoderName);
-        MediaFormat mediaFormat = MediaFormat.createVideoFormat(MIME_TYPE, mWidth, mHeight);
+        decoder = MediaCodec.createByCodecName(decoderName);
+        MediaFormat mediaFormat = MediaFormat.createVideoFormat(MIME_TYPE, width, height);
         mediaFormat.setByteBuffer("csd-0", csd0);
-        mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, mDecoderColorFormat);
-        mDecoder.configure(mediaFormat, null, null, 0);
-        mDecoder.start();
+        mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, decoderColorFormat);
+        decoder.configure(mediaFormat, null, null, 0);
+        decoder.start();
 
-        ByteBuffer[] decInputBuffers = mDecoder.getInputBuffers();
+        ByteBuffer[] decInputBuffers = decoder.getInputBuffers();
 
-        int decInputIndex = mDecoder.dequeueInputBuffer(1000000 / FRAMERATE);
+        int decInputIndex = decoder.dequeueInputBuffer(1000000 / FRAMERATE);
         if (decInputIndex >= 0)
         {
             decInputBuffers[decInputIndex].clear();
             decInputBuffers[decInputIndex].put(prefix);
-            decInputBuffers[decInputIndex].put(mSPS);
-            mDecoder.queueInputBuffer(decInputIndex, 0, decInputBuffers[decInputIndex].position(), timestamp(), 0);
+            decInputBuffers[decInputIndex].put(SPS);
+            decoder.queueInputBuffer(decInputIndex, 0, decInputBuffers[decInputIndex].position(), timestamp(), 0);
         }
         else
         {
             Log.e(TAG,"No buffer available!");
         }
 
-        decInputIndex = mDecoder.dequeueInputBuffer(1000000 / FRAMERATE);
+        decInputIndex = decoder.dequeueInputBuffer(1000000 / FRAMERATE);
         if (decInputIndex >= 0)
         {
             decInputBuffers[decInputIndex].clear();
             decInputBuffers[decInputIndex].put(prefix);
-            decInputBuffers[decInputIndex].put(mPPS);
-            mDecoder.queueInputBuffer(decInputIndex, 0, decInputBuffers[decInputIndex].position(), timestamp(), 0);
+            decInputBuffers[decInputIndex].put(PPS);
+            decoder.queueInputBuffer(decInputIndex, 0, decInputBuffers[decInputIndex].position(), timestamp(), 0);
         }
         else
         {
@@ -739,25 +722,27 @@ public class EncoderDebugger
 
     private void releaseDecoder()
     {
-        if (mDecoder != null)
+        if (decoder == null)
         {
-            try
-            {
-                mDecoder.stop();
-            }
-            catch (Exception ignore)
-            {
-                Log.e(TAG, "Stopping decoder threw", ignore);
-            }
+            return;
+        }
 
-            try
-            {
-                mDecoder.release();
-            }
-            catch (Exception ignore)
-            {
-                Log.e(TAG, "Releasing decoder threw", ignore);
-            }
+        try
+        {
+            decoder.stop();
+        }
+        catch (Exception ignore)
+        {
+            Log.e(TAG, "Stopping decoder threw", ignore);
+        }
+
+        try
+        {
+            decoder.release();
+        }
+        catch (Exception ignore)
+        {
+            Log.e(TAG, "Releasing decoder threw", ignore);
         }
     }
 
@@ -766,23 +751,26 @@ public class EncoderDebugger
      */
     private long searchSPSandPPS()
     {
-        ByteBuffer[] inputBuffers = mEncoder.getInputBuffers();
-        ByteBuffer[] outputBuffers = mEncoder.getOutputBuffers();
+        ByteBuffer[] inputBuffers = encoder.getInputBuffers();
+        ByteBuffer[] outputBuffers = encoder.getOutputBuffers();
         BufferInfo info = new BufferInfo();
         byte[] csd = new byte[128];
-        int len = 0, p = 4, q = 4;
-        long elapsed = 0, now = timestamp();
+        int len = 0;
+        int p = 4;
+        int q = 4;
+        long elapsed = 0;
+        long now = timestamp();
 
-        while (elapsed < 3000000 && (mSPS == null || mPPS == null))
+        while (elapsed < 3000000 && (SPS == null || PPS == null))
         {
             // Some encoders won't give us the SPS and PPS unless they receive something to encode first...
-            int bufferIndex = mEncoder.dequeueInputBuffer(1000000 / FRAMERATE);
+            int bufferIndex = encoder.dequeueInputBuffer(1000000 / FRAMERATE);
             if (bufferIndex >= 0)
             {
-                check(inputBuffers[bufferIndex].capacity() >= mData.length, "The input buffer is not big enough.");
+                check(inputBuffers[bufferIndex].capacity() >= data.length, "The input buffer is not big enough.");
                 inputBuffers[bufferIndex].clear();
-                inputBuffers[bufferIndex].put(mData, 0, mData.length);
-                mEncoder.queueInputBuffer(bufferIndex, 0, mData.length, timestamp(), 0);
+                inputBuffers[bufferIndex].put(data, 0, data.length);
+                encoder.queueInputBuffer(bufferIndex, 0, data.length, timestamp(), 0);
             }
             else
             {
@@ -793,25 +781,25 @@ public class EncoderDebugger
             // encoders will give those parameters through the MediaFormat object (that is the normal behaviour).
             // But some other will not, in that case we try to find a NAL unit of type 7 or 8 in the byte stream outputed by the encoder...
 
-            int index = mEncoder.dequeueOutputBuffer(info, 1000000 / FRAMERATE);
+            int index = encoder.dequeueOutputBuffer(info, 1000000 / FRAMERATE);
 
             if (index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED)
             {
                 // The PPS and PPS should be there
-                MediaFormat format = mEncoder.getOutputFormat();
+                MediaFormat format = encoder.getOutputFormat();
                 ByteBuffer spsb = format.getByteBuffer("csd-0");
                 ByteBuffer ppsb = format.getByteBuffer("csd-1");
-                mSPS = new byte[spsb.capacity() - 4];
+                SPS = new byte[spsb.capacity() - 4];
                 spsb.position(4);
-                spsb.get(mSPS,0, mSPS.length);
-                mPPS = new byte[ppsb.capacity() - 4];
+                spsb.get(SPS,0, SPS.length);
+                PPS = new byte[ppsb.capacity() - 4];
                 ppsb.position(4);
-                ppsb.get(mPPS,0, mPPS.length);
+                ppsb.get(PPS,0, PPS.length);
                 break;
             }
             else if (index == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED)
             {
-                outputBuffers = mEncoder.getOutputBuffers();
+                outputBuffers = encoder.getOutputBuffers();
             }
             else if (index >= 0)
             {
@@ -837,13 +825,13 @@ public class EncoderDebugger
 
                             if ((csd[q] & 0x1F) == 7)
                             {
-                                mSPS = new byte[p - q];
-                                System.arraycopy(csd, q, mSPS, 0, p - q);
+                                SPS = new byte[p - q];
+                                System.arraycopy(csd, q, SPS, 0, p - q);
                             }
                             else
                             {
-                                mPPS = new byte[p - q];
-                                System.arraycopy(csd, q, mPPS, 0, p - q);
+                                PPS = new byte[p - q];
+                                System.arraycopy(csd, q, PPS, 0, p - q);
                             }
 
                             p += 4;
@@ -852,15 +840,15 @@ public class EncoderDebugger
                     }
                 }
 
-                mEncoder.releaseOutputBuffer(index, false);
+                encoder.releaseOutputBuffer(index, false);
             }
 
             elapsed = timestamp() - now;
         }
 
-        check(mPPS != null && mSPS != null, "Could not determine the SPS & PPS.");
-        mB64PPS = Base64.encodeToString(mPPS, 0, mPPS.length, Base64.NO_WRAP);
-        mB64SPS = Base64.encodeToString(mSPS, 0, mSPS.length, Base64.NO_WRAP);
+        check(PPS != null && SPS != null, "Could not determine the SPS & PPS.");
+        base64PPS = Base64.encodeToString(PPS, 0, PPS.length, Base64.NO_WRAP);
+        base64SPS = Base64.encodeToString(SPS, 0, SPS.length, Base64.NO_WRAP);
 
         return elapsed;
     }
@@ -868,22 +856,24 @@ public class EncoderDebugger
     private long encode()
     {
         int n = 0;
-        long elapsed = 0, now = timestamp();
-        int encOutputIndex = 0, encInputIndex = 0;
+        long elapsed = 0;
+        long now = timestamp();
+        int encOutputIndex = 0;
+        int encInputIndex = 0;
         BufferInfo info = new BufferInfo();
-        ByteBuffer[] encInputBuffers = mEncoder.getInputBuffers();
-        ByteBuffer[] encOutputBuffers = mEncoder.getOutputBuffers();
+        ByteBuffer[] encInputBuffers = encoder.getInputBuffers();
+        ByteBuffer[] encOutputBuffers = encoder.getOutputBuffers();
 
         while (elapsed < 5000000)
         {
             // Feeds the encoder with an image
-            encInputIndex = mEncoder.dequeueInputBuffer(1000000 / FRAMERATE);
+            encInputIndex = encoder.dequeueInputBuffer(1000000 / FRAMERATE);
             if (encInputIndex >= 0)
             {
-                check(encInputBuffers[encInputIndex].capacity() >= mData.length, "The input buffer is not big enough.");
+                check(encInputBuffers[encInputIndex].capacity() >= data.length, "The input buffer is not big enough.");
                 encInputBuffers[encInputIndex].clear();
-                encInputBuffers[encInputIndex].put(mData, 0, mData.length);
-                mEncoder.queueInputBuffer(encInputIndex, 0, mData.length, timestamp(), 0);
+                encInputBuffers[encInputIndex].put(data, 0, data.length);
+                encoder.queueInputBuffer(encInputIndex, 0, data.length, timestamp(), 0);
             }
             else
             {
@@ -891,20 +881,20 @@ public class EncoderDebugger
             }
 
             // Tries to get a NAL unit
-            encOutputIndex = mEncoder.dequeueOutputBuffer(info, 1000000 / FRAMERATE);
+            encOutputIndex = encoder.dequeueOutputBuffer(info, 1000000 / FRAMERATE);
             if (encOutputIndex == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED)
             {
-                encOutputBuffers = mEncoder.getOutputBuffers();
+                encOutputBuffers = encoder.getOutputBuffers();
             }
             else if (encOutputIndex >= 0)
             {
-                mVideo[n] = new byte[info.size];
+                video[n] = new byte[info.size];
                 encOutputBuffers[encOutputIndex].clear();
-                encOutputBuffers[encOutputIndex].get(mVideo[n++], 0, info.size);
-                mEncoder.releaseOutputBuffer(encOutputIndex, false);
+                encOutputBuffers[encOutputIndex].get(video[n++], 0, info.size);
+                encoder.releaseOutputBuffer(encOutputIndex, false);
                 if (n >= NB_ENCODED)
                 {
-                    flushMediaCodec(mEncoder);
+                    flushMediaCodec(encoder);
                     return elapsed;
                 }
             }
@@ -921,11 +911,15 @@ public class EncoderDebugger
      */
     private long decode(boolean withPrefix)
     {
-        int n = 0, i = 0, j = 0;
-        long elapsed = 0, now = timestamp();
-        int decInputIndex = 0, decOutputIndex = 0;
-        ByteBuffer[] decInputBuffers = mDecoder.getInputBuffers();
-        ByteBuffer[] decOutputBuffers = mDecoder.getOutputBuffers();
+        int n = 0;
+        int i = 0;
+        int j = 0;
+        long elapsed = 0;
+        long now = timestamp();
+        int decInputIndex = 0;
+        int decOutputIndex = 0;
+        ByteBuffer[] decInputBuffers = decoder.getInputBuffers();
+        ByteBuffer[] decOutputBuffers = decoder.getOutputBuffers();
         BufferInfo info = new BufferInfo();
 
         while (elapsed < 3000000)
@@ -933,31 +927,31 @@ public class EncoderDebugger
             // Feeds the decoder with a NAL unit
             if (i < NB_ENCODED)
             {
-                decInputIndex = mDecoder.dequeueInputBuffer(1000000 / FRAMERATE);
+                decInputIndex = decoder.dequeueInputBuffer(1000000 / FRAMERATE);
                 if (decInputIndex >= 0)
                 {
                     int l1 = decInputBuffers[decInputIndex].capacity();
-                    int l2 = mVideo[i].length;
+                    int l2 = video[i].length;
                     decInputBuffers[decInputIndex].clear();
 
-                    if ((withPrefix && hasPrefix(mVideo[i])) || (!withPrefix && !hasPrefix(mVideo[i])))
+                    if ((withPrefix && hasPrefix(video[i])) || (!withPrefix && !hasPrefix(video[i])))
                     {
                         check(l1 >= l2, "The decoder input buffer is not big enough (nal=" + l2 + ", capacity=" + l1 + ").");
-                        decInputBuffers[decInputIndex].put(mVideo[i],0, mVideo[i].length);
+                        decInputBuffers[decInputIndex].put(video[i],0, video[i].length);
                     }
-                    else if (withPrefix && !hasPrefix(mVideo[i]))
+                    else if (withPrefix && !hasPrefix(video[i]))
                     {
                         check(l1 >= l2 + 4, "The decoder input buffer is not big enough (nal=" + (l2 + 4) + ", capacity=" + l1 + ").");
                         decInputBuffers[decInputIndex].put(new byte[] { 0, 0, 0, 1 });
-                        decInputBuffers[decInputIndex].put(mVideo[i],0, mVideo[i].length);
+                        decInputBuffers[decInputIndex].put(video[i],0, video[i].length);
                     }
-                    else if (!withPrefix && hasPrefix(mVideo[i]))
+                    else if (!withPrefix && hasPrefix(video[i]))
                     {
                         check(l1 >= l2 - 4, "The decoder input buffer is not big enough (nal=" + (l2 - 4) + ", capacity=" + l1 + ").");
-                        decInputBuffers[decInputIndex].put(mVideo[i],4,mVideo[i].length - 4);
+                        decInputBuffers[decInputIndex].put(video[i],4, video[i].length - 4);
                     }
 
-                    mDecoder.queueInputBuffer(decInputIndex, 0, l2, timestamp(), 0);
+                    decoder.queueInputBuffer(decInputIndex, 0, l2, timestamp(), 0);
                     i++;
                 }
                 else
@@ -967,14 +961,14 @@ public class EncoderDebugger
             }
 
             // Tries to get a decoded image
-            decOutputIndex = mDecoder.dequeueOutputBuffer(info, 1000000 / FRAMERATE);
+            decOutputIndex = decoder.dequeueOutputBuffer(info, 1000000 / FRAMERATE);
             if (decOutputIndex == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED)
             {
-                decOutputBuffers = mDecoder.getOutputBuffers();
+                decOutputBuffers = decoder.getOutputBuffers();
             }
             else if (decOutputIndex == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED)
             {
-                mDecOutputFormat = mDecoder.getOutputFormat();
+                decOutputFormat = decoder.getOutputFormat();
             }
             else if (decOutputIndex >= 0)
             {
@@ -982,15 +976,15 @@ public class EncoderDebugger
                 {
                     // We have successfully encoded and decoded an image !
                     int length = info.size;
-                    mDecodedVideo[j] = new byte[length];
+                    decodedVideo[j] = new byte[length];
                     decOutputBuffers[decOutputIndex].clear();
-                    decOutputBuffers[decOutputIndex].get(mDecodedVideo[j], 0, length);
+                    decOutputBuffers[decOutputIndex].get(decodedVideo[j], 0, length);
 
                     // Converts the decoded frame to NV21
                     convertToNV21(j);
                     if (j >= NB_DECODED - 1)
                     {
-                        flushMediaCodec(mDecoder);
+                        flushMediaCodec(decoder);
                         Log.v(TAG, "Decoding " + n + " frames took " + elapsed / 1000 + " ms");
                         return elapsed;
                     }
@@ -998,7 +992,7 @@ public class EncoderDebugger
                     j++;
                 }
 
-                mDecoder.releaseOutputBuffer(decOutputIndex, false);
+                decoder.releaseOutputBuffer(decOutputIndex, false);
                 n++;
             }
 
@@ -1048,9 +1042,9 @@ public class EncoderDebugger
         }
     }
 
-    private void check(boolean cond, String message)
+    private void check(boolean condition, String message)
     {
-        if (!cond)
+        if (!condition)
         {
             Log.e(TAG, message);
             throw new IllegalStateException(message);

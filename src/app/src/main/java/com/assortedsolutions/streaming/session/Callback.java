@@ -1,6 +1,5 @@
 package com.assortedsolutions.streaming.session;
 
-
 import com.assortedsolutions.streaming.video.VideoStream;
 
 /**
